@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nub Chat Pets — every viewer becomes a nub cat</title>
+<meta name="description" content="A free OBS overlay that turns your Twitch chat into roaming 3D nub cats — with chat-triggered duels, races, boss battles and simon says." />
+<meta name="theme-color" content="#9ecdff" />
+<meta property="og:title" content="Nub Chat Pets" />
+<meta property="og:description" content="Every viewer in your Twitch chat becomes a roaming 3D nub cat. Duels, races, boss battles — chat plays, chat watches." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="./assets/mascot.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --color-brand:        #6bb1ff;
+  --color-brand-soft:   #9ecdff;
+  --color-brand-tint:   #b7d9fe;
+  --color-brand-mist:   #eef4ff;
+  --color-brand-deep:   #2f7ed8;
+  --color-accent:       #ffc0d8;
+  --color-ink:          #1a3d6b;
+  --color-ink-soft:     #4f5b73;
+  --color-mute:         #6c7a93;
+  --color-surface:      #ffffff;
+  --color-surface-soft: #f7faff;
+  --color-border:       #e5edfa;
+  --color-border-firm:  #d8e3f5;
+  --color-ok:           #34c77b;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --shadow-card:   0 12px 32px rgba(108, 178, 255, 0.10);
+  --shadow-button: 0 6px 16px rgba(108, 178, 255, 0.35);
+  --shadow-pop:    0 8px 18px rgba(108, 178, 255, 0.40);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Poppins", sans-serif;
+  background: var(--color-brand-soft);
+  background-image:
+    radial-gradient(600px 400px at 85% -5%, rgba(255,192,216,0.45), transparent 65%),
+    radial-gradient(700px 500px at -10% 30%, rgba(255,255,255,0.35), transparent 60%);
+  color: var(--color-ink);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+
+/* ---------- nav ---------- */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border);
+}
+.nav-inner {
+  max-width: 980px; margin: 0 auto; padding: 10px 22px;
+  display: flex; align-items: center; gap: 14px;
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; color: var(--color-ink); text-decoration: none; }
+.nav-logo img { width: 34px; height: 34px; object-fit: contain; }
+.nav-links { margin-left: auto; display: flex; gap: 4px; }
+.nav-links a {
+  color: var(--color-ink-soft); text-decoration: none; font-size: 14px; font-weight: 600;
+  padding: 7px 14px; border-radius: var(--radius-pill);
+  transition: background 0.18s var(--ease-out), color 0.18s var(--ease-out);
+}
+.nav-links a:hover { background: var(--color-brand-mist); color: var(--color-brand-deep); }
+@media (max-width: 640px) { .nav-links a:not(.nav-cta) { display: none; } }
+.nav-cta {
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+  color: #fff !important;
+  box-shadow: var(--shadow-button);
+}
+
+/* ---------- hero ---------- */
+.hero { padding: 72px 0 40px; text-align: center; position: relative; }
+.hero-cat {
+  width: 128px; height: 128px; margin: 0 auto 18px;
+  animation: breathe 4.6s ease-in-out infinite;
+  transform-origin: 50% 60%;
+  filter: drop-shadow(0 14px 22px rgba(47,126,216,0.25));
+}
+.hero-cat .eye { animation: blink 6s infinite; transform-origin: center; }
+@keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--color-surface); border: 1px solid var(--color-border-firm);
+  color: var(--color-brand-deep); font-size: 13px; font-weight: 700;
+  padding: 6px 16px; border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card); margin-bottom: 20px;
+}
+.hero-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-ok); }
+h1 { font-size: clamp(34px, 6vw, 54px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+h1 .grad {
+  background: linear-gradient(120deg, var(--color-brand-deep), var(--color-brand));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-sub {
+  max-width: 560px; margin: 16px auto 30px;
+  color: var(--color-ink-soft); font-size: 17px; font-weight: 500;
+}
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 26px; border-radius: var(--radius-pill);
+  font-family: inherit; font-size: 15px; font-weight: 700; text-decoration: none;
+  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s var(--ease-out);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+  color: #fff; box-shadow: var(--shadow-button);
+}
+.btn-ghost {
+  background: var(--color-surface); color: var(--color-brand-deep);
+  border: 1.5px solid var(--color-border-firm); box-shadow: var(--shadow-card);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-primary:hover { box-shadow: var(--shadow-pop); }
+
+/* ---------- sections ---------- */
+section { padding: 44px 0; }
+.eyebrow {
+  font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-brand-deep); margin-bottom: 8px;
+}
+h2 { font-size: clamp(24px, 4vw, 32px); font-weight: 800; letter-spacing: -0.01em; margin-bottom: 10px; }
+.sec-sub { color: var(--color-ink-soft); max-width: 620px; margin-bottom: 28px; }
+
+/* cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.grid > * { min-width: 0; }
+.card {
+  background: var(--color-surface); border-radius: var(--radius-xl);
+  padding: 26px; box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border);
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
+}
+@media (hover:hover) {
+  .card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(108,178,255,0.18); }
+}
+.card .icon-tile {
+  width: 46px; height: 46px; border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 14px;
+  box-shadow: var(--shadow-button);
+}
+.card h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.card p { font-size: 14px; color: var(--color-ink-soft); }
+.card .cmd {
+  display: inline-block; margin-top: 12px;
+  background: var(--color-brand-mist); color: var(--color-brand-deep);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; font-weight: 600;
+  padding: 4px 12px; border-radius: var(--radius-pill);
+}
+
+/* steps */
+.steps { counter-reset: step; display: grid; gap: 14px; }
+.step {
+  display: flex; gap: 18px; align-items: flex-start;
+  background: var(--color-surface); border-radius: var(--radius-xl);
+  padding: 22px 26px; box-shadow: var(--shadow-card); border: 1px solid var(--color-border);
+}
+.step::before {
+  counter-increment: step; content: counter(step);
+  flex: 0 0 auto;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+  color: #fff; font-weight: 800; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-button);
+}
+.step h3 { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+.step p { font-size: 14px; color: var(--color-ink-soft); }
+.step code {
+  background: var(--color-brand-mist); color: var(--color-brand-deep);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  padding: 2px 8px; border-radius: 6px; word-break: break-all;
+}
+
+/* params table */
+.table-card {
+  background: var(--color-surface); border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card); border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th {
+  text-align: left; padding: 14px 20px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-mute); background: var(--color-surface-soft);
+  border-bottom: 1px solid var(--color-border);
+}
+td { padding: 12px 20px; border-bottom: 1px solid var(--color-border); color: var(--color-ink-soft); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+td code {
+  background: var(--color-brand-mist); color: var(--color-brand-deep);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; font-weight: 600;
+  padding: 2px 9px; border-radius: 6px; white-space: nowrap;
+}
+.table-scroll { overflow-x: auto; }
+
+/* demo strip */
+.demo-strip {
+  background: linear-gradient(150deg, var(--color-brand-deep) 0%, var(--color-brand) 55%, #5aa7ec 100%);
+  border-radius: var(--radius-xl);
+  padding: 40px 34px; text-align: center; color: #fff;
+  box-shadow: 0 16px 40px rgba(47,126,216,0.28);
+  position: relative; overflow: hidden;
+}
+.demo-strip::before {
+  content: ""; position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,192,216,0.5), transparent 70%);
+  filter: blur(24px); pointer-events: none;
+}
+.demo-strip::after {
+  content: ""; position: absolute; bottom: -70px; left: -40px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); filter: blur(10px); pointer-events: none;
+}
+.demo-strip h2 { color: #fff; position: relative; z-index: 1; }
+.demo-strip p { color: rgba(255,255,255,0.88); max-width: 520px; margin: 8px auto 22px; position: relative; z-index: 1; }
+.demo-strip .btn { background: #fff; color: var(--color-brand-deep); box-shadow: 0 8px 22px rgba(10,40,80,0.25); position: relative; z-index: 1; }
+.demo-strip .cmds {
+  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; position: relative; z-index: 1;
+}
+.demo-strip .cmds span {
+  background: rgba(255,255,255,0.14); backdrop-filter: blur(4px);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  padding: 5px 13px; border-radius: var(--radius-pill);
+}
+
+/* faq */
+.faq { display: grid; gap: 12px; }
+details {
+  background: var(--color-surface); border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border); box-shadow: var(--shadow-card);
+  padding: 0; overflow: hidden;
+}
+summary {
+  cursor: pointer; padding: 17px 22px; font-weight: 700; font-size: 15px;
+  list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-size: 20px; color: var(--color-brand-deep); font-weight: 600; transition: transform 0.2s var(--ease-out); }
+details[open] summary::after { transform: rotate(45deg); }
+details .faq-body { padding: 0 22px 18px; font-size: 14px; color: var(--color-ink-soft); }
+details .faq-body code {
+  background: var(--color-brand-mist); color: var(--color-brand-deep);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
+  padding: 1px 7px; border-radius: 6px;
+}
+
+/* footer */
+footer { padding: 40px 0 56px; text-align: center; color: var(--color-mute); font-size: 13.5px; }
+footer .foot-logo { width: 40px; height: 40px; object-fit: contain; margin-bottom: 10px; opacity: 0.9; }
+footer a { color: var(--color-brand-deep); font-weight: 600; text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#"><img src="./assets/mascot.png" alt="nub cat" /> Nub Chat Pets</a>
+    <div class="nav-links">
+      <a href="#games">Games</a>
+      <a href="#setup">Setup</a>
+      <a href="#params">Settings</a>
+      <a href="#faq">FAQ</a>
+      <a class="nav-cta" href="#setup">Get started</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <svg class="hero-cat" viewBox="-15 -15 259 259" fill="none" aria-hidden="true">
+      <path d="M34.41 164.66Q18 150 11.46 128.99L10.54 126.01Q4 105 13.52 85.17L21.08 69.42Q28 55 34.26 40.28L44.48 16.28Q48 8 54.86 13.83L79.62 34.88Q88 42 98.97 42.84L102.3 43.09Q114.27 44 126.24 43.09L129.57 42.84Q140.54 42 148.92 34.88L173.68 13.83Q180.54 8 184.06 16.28L194.28 40.28Q200.54 55 207.46 69.42L215.02 85.17Q224.54 105 218 126.01L217.08 128.99Q210.54 150 194.13 164.66L186.64 171.35Q168 188 143.42 192.57L139.83 193.24Q114.27 198 88.71 193.24L85.12 192.57Q60.54 188 41.9 171.35Z" fill="#ADD1F7"/>
+      <circle class="eye" cx="84" cy="96" r="11" fill="#1a3d6b"/>
+      <circle class="eye" cx="144" cy="96" r="11" fill="#1a3d6b"/>
+    </svg>
+    <div class="hero-badge"><span class="dot"></span> free · runs locally · no login</div>
+    <h1>Every viewer becomes a<br /><span class="grad">nub cat</span></h1>
+    <p class="hero-sub">Drop one browser source into OBS and your Twitch chat turns into a
+      crowd of roaming 3D nub cats. They chat, they hop, they duel, they race —
+      and sometimes a giant boss shows up.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#setup">Set it up in 2 minutes</a>
+      <a class="btn btn-ghost" href="#games">See the games</a>
+    </div>
+  </header>
+
+  <section id="games">
+    <div class="eyebrow">Mini games</div>
+    <h2>Chat doesn't just watch — it plays</h2>
+    <p class="sec-sub">Chat commands trigger events live on your overlay. Winners get crowns,
+      losers get dramatic KOs, and everyone earns points just by hanging out.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon-tile">⚔️</div>
+        <h3>Duels</h3>
+        <p>Challenge anyone. Both cats charge, collide mid-air with a screen shake, and chat
+          cheers decide the winner. Loser flops over. Winner wears a golden crown.</p>
+        <span class="cmd">!duel @friend</span>
+      </div>
+      <div class="card">
+        <div class="icon-tile">🏁</div>
+        <h3>Races</h3>
+        <p>Open a join window, cats line up at the edge, then it's a hopping sprint across
+          your stream — with random trip-flops. Podium for the top 3.</p>
+        <span class="cmd">!race &nbsp;+&nbsp; !join</span>
+      </div>
+      <div class="card">
+        <div class="icon-tile">👹</div>
+        <h3>Boss battles</h3>
+        <p>A giant dark nub awakens with a red HP bar. Every message deals damage,
+          love messages crit for 5. Beat it and loot rains while fighters get golden auras.</p>
+        <span class="cmd">!boss</span>
+      </div>
+      <div class="card">
+        <div class="icon-tile">🧠</div>
+        <h3>Simon says</h3>
+        <p>Fires automatically between games. Cats must hop, sit, or spin on command —
+          obedient cats score points, slackers faint on the spot.</p>
+        <span class="cmd">automatic</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <div class="eyebrow">Setup</div>
+    <h2>Live in under two minutes</h2>
+    <p class="sec-sub">Everything runs on your machine. No account, no login, no server —
+      the overlay reads public Twitch chat anonymously.</p>
+    <div class="steps">
+      <div class="step">
+        <div>
+          <h3>Download &amp; start the server</h3>
+          <p>Clone or download the repo, then run a tiny local web server from the folder:<br />
+            <code>cd nubcat-chat-pets &amp;&amp; python3 -m http.server 8741</code></p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Test it in your browser</h3>
+          <p>Open <code>http://localhost:8741/index.html?channel=yourname</code> —
+            send a chat message and watch your cat hop in. Try
+            <code>?mock=1&amp;debug=1</code> for a simulated chat demo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Add it to OBS</h3>
+          <p>Sources → <b>+</b> → <b>Browser</b>, paste the same URL, set width/height to your
+            canvas (e.g. 1920×1080). The background is fully transparent — only cats,
+            labels and bubbles composite onto your stream.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3>Chat takes over</h3>
+          <p>Viewers appear as they chat, get their own persistent cat in their Twitch color,
+            and can trigger duels, races and boss battles whenever they want.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="params">
+    <div class="eyebrow">Settings</div>
+    <h2>Tune it with URL parameters</h2>
+    <p class="sec-sub">Everything is configured by adding parameters to the URL you paste into OBS.
+      Combine them like <code>?channel=yourname&amp;max=60&amp;scale=1.2</code>.</p>
+    <div class="table-card table-scroll">
+      <table>
+        <thead><tr><th>Param</th><th>Default</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>channel</code></td><td>—</td><td>Your Twitch channel (required, or use mock)</td></tr>
+          <tr><td><code>max</code></td><td>40</td><td>Max cats on screen at once</td></tr>
+          <tr><td><code>ttl</code></td><td>10</td><td>Minutes of silence before a cat despawns</td></tr>
+          <tr><td><code>scale</code></td><td>1</td><td>Global cat size (0.2–3)</td></tr>
+          <tr><td><code>speed</code></td><td>1</td><td>Walking speed (0.2–3)</td></tr>
+          <tr><td><code>bubbles</code></td><td>on</td><td>Speech bubbles showing message text</td></tr>
+          <tr><td><code>celebrate</code></td><td>on</td><td>Mass hops on subs, raids and gift bombs</td></tr>
+          <tr><td><code>flip</code></td><td>off</td><td>Flip cats 180° if they walk backwards on your setup</td></tr>
+          <tr><td><code>games</code></td><td>on</td><td>Master switch for all mini games</td></tr>
+          <tr><td><code>duelCooldown</code></td><td>90</td><td>Seconds between duels</td></tr>
+          <tr><td><code>raceCooldown</code></td><td>180</td><td>Seconds between races</td></tr>
+          <tr><td><code>bossHp</code></td><td>250</td><td>Boss hit points (chat damage needed to win)</td></tr>
+          <tr><td><code>bossCooldown</code></td><td>420</td><td>Seconds between boss battles</td></tr>
+          <tr><td><code>crownSec</code></td><td>300</td><td>How long winners keep their crown</td></tr>
+          <tr><td><code>debug</code></td><td>off</td><td>Checkerboard background + stats HUD for tuning</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="demo-strip">
+      <h2>See it before you stream it</h2>
+      <p>Mock mode runs a simulated chat so you can watch duels, races and boss fights
+        right now — no Twitch needed.</p>
+      <a class="btn" href="http://localhost:8741/index.html?mock=1&debug=1">Open the live demo</a>
+      <div class="cmds">
+        <span>!duel @zoomies</span><span>!race</span><span>!join</span><span>!boss</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="eyebrow">FAQ</div>
+    <h2>Good questions</h2>
+    <div class="faq">
+      <details>
+        <summary>Is it really free? What's the catch?</summary>
+        <div class="faq-body">It's free and it runs entirely on your machine. The overlay connects
+          to Twitch's public anonymous read-only chat gateway — no OAuth, no account access,
+          nothing to trust but your own browser.</div>
+      </details>
+      <details>
+        <summary>Does it slow down my stream?</summary>
+        <div class="faq-body">No. It's a lightweight WebGL overlay capped at 40 cats by default
+          (raise with <code>?max=</code>), particles are hard-capped, and it renders only when
+          OBS shows the source. A 2015 laptop handles it fine.</div>
+      </details>
+      <details>
+        <summary>How do viewers earn points?</summary>
+        <div class="faq-body">Every chat message earns a point. Points tip the odds in duels and
+          show up in the debug HUD. Boss fighters earn bonus points and winners get crowns —
+          all stored locally in the overlay's browser storage.</div>
+      </details>
+      <details>
+        <summary>Can I turn the games off and just have cats?</summary>
+        <div class="faq-body">Yes — add <code>?games=0</code> to your OBS URL. You get the pure
+          roaming-cat overlay with hops, hearts and celebration jumps, no game events.</div>
+      </details>
+      <details>
+        <summary>My cats walk backwards. Fix?</summary>
+        <div class="faq-body">Some capture setups mirror the canvas. Add <code>?flip=1</code> and
+          they'll face the right way.</div>
+      </details>
+      <details>
+        <summary>The cats aren't showing up in OBS</summary>
+        <div class="faq-body">Make sure the local server is still running in a terminal
+          (<code>python3 -m http.server 8741</code>) and the URL in OBS uses
+          <code>?channel=yourname</code> exactly. Tick "Shutdown source when not visible" off if
+          you want cats to keep roaming while previewing scenes.</div>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <img class="foot-logo" src="./assets/mascot.png" alt="" />
+    <div>Nub Chat Pets — a silly overlay for silly streams.</div>
+    <div>Part of the nub universe · <a href="https://nub.lol">nub.lol</a> · <a href="https://github.com/DevvGwardo/nubcat-chat-pets">source (private)</a></div>
+  </footer>
+
+</div>
+</body>
+</html>
