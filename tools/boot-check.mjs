@@ -22,7 +22,8 @@ const server = createServer(async (req, res) => {
   } catch { res.writeHead(404); res.end(); }
 });
 await new Promise((r) => server.listen(0, r));
-const origin = `http://127.0.0.1:${server.address().port}`;
+// NUB_ORIGIN overrides the local server (e.g. to check production).
+const origin = process.env.NUB_ORIGIN || `http://127.0.0.1:${server.address().port}`;
 
 const PORT = 9339;
 const chrome = spawn(
