@@ -40,10 +40,10 @@
   - CHECK: `grep -c "source (private)" docs/index.html` → 0; repo link present
   - EVIDENCE: `private-label=0 repo-link=1`
 
-- [ ] g9-committed-and-live: changes committed to main and pushed; live GitHub Pages HTML contains a marker from the new design
+- [x] g9-committed-and-live: changes committed to main and pushed; live GitHub Pages HTML contains a marker from the new design
   - CHECK: `curl -s https://devvgwardo.github.io/nubcat-chat-pets/ | grep -c "nch-redesign-v2"`
   - EXPECT: `1` or more
-  - EVIDENCE: pending push
+  - EVIDENCE: commit `5139ee8` pushed to main; live marker=1 after ~30s; hosted overlay + fbx + main.js all HTTP 200 on GitHub Pages; live boot via tools/verify.mjs → `hud:"mock chat · 20 pets · 24 fps"`, `JS_ERRORS: none`
 
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
