@@ -46,6 +46,20 @@
   EXPECT: /[^0]/
   EVIDENCE: 1
 
+- [x] g10-demo-embedded: landing page embeds the live overlay iframe (mock mode, no debug checkerboard)
+  CHECK: grep -c "iframe class=\"nub-demo\" src=\"./overlay/index.html?mock=1\"" docs/index.html
+  EXPECT: 1
+  EVIDENCE: 1
+
+- [x] g11-no-param-guard: both overlay copies (root + docs) show a config hint instead of a blank page when channel/mock missing
+  CHECK: sh -c '[ $(grep -l "No chat source set" index.html docs/overlay/index.html | wc -l | tr -d " ") -eq 2 ]'
+  EVIDENCE: (no output)
+
+- [x] g12-demoframe-boots-headless: the embedded demo iframe renders a live WebGL canvas with cats visible
+  CHECK: node tools/boot-check.mjs
+  EXPECT: /DEMOFRAME OK iframe-canvas=true/
+  EVIDENCE: DEMOFRAME OK iframe-canvas=true | BOOT OK cats=8 errors=none
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.

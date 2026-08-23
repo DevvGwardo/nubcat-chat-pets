@@ -179,20 +179,19 @@ td code { white-space: nowrap; }
 td:first-child code { color: var(--accent); }
 .table-scroll { overflow-x: auto; }
 
-/* demo cta */
-.demo-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 28px 24px; text-align: center;
+/* embedded live demo */
+.demo-frame {
+  border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #edf3fb 0%, #e2ecf9 100%);
 }
-.demo-card p { color: var(--muted); max-width: 480px; margin: 0 auto 18px; font-size: 15px; }
-.demo-card .cmds {
-  display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px;
+.demo-frame iframe { display: block; width: 100%; height: min(58vw, 420px); border: 0; }
+.demo-meta {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  margin-top: 10px; font-size: 13px; color: var(--faint); flex-wrap: wrap;
 }
-.demo-card .cmds span {
-  background: var(--chip); color: var(--muted);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
-  padding: 4px 12px; border-radius: 6px;
-}
+.demo-meta a { color: var(--accent); font-weight: 550; text-decoration: none; }
+.demo-meta a:hover { text-decoration: underline; }
 
 /* faq */
 .faq { display: grid; gap: 10px; }
@@ -245,7 +244,7 @@ footer a:hover { text-decoration: underline; }
       roaming 3D nub cats — they chat, they hop, they duel, they race,
       and sometimes a giant boss shows up.</p>
     <div class="hero-actions">
-      <a class="btn btn-primary" href="./overlay/index.html?mock=1&debug=1">Open the live demo</a>
+      <a class="btn btn-primary" href="./overlay/index.html?mock=1" target="_blank" rel="noopener">Open the live demo</a>
       <a class="btn btn-ghost" href="#setup">Set up in 2 minutes</a>
     </div>
     <p class="hero-note"><span class="dot"></span>free · runs in your browser · no login</p>
@@ -349,15 +348,18 @@ footer a:hover { text-decoration: underline; }
     </div>
   </section>
 
-  <section>
-    <div class="demo-card">
-      <h2>See it before you stream it</h2>
-      <p>The demo runs a simulated chat so you can watch duels, races and boss fights
-        right now — no Twitch needed.</p>
-      <a class="btn btn-primary" href="./overlay/index.html?mock=1&debug=1">Open the live demo</a>
-      <div class="cmds">
-        <span>!duel @zoomies</span><span>!race</span><span>!join</span><span>!boss</span>
-      </div>
+  <section id="demo">
+    <div class="eyebrow">Live demo</div>
+    <h2>Watch it run right here</h2>
+    <p class="sec-sub">This is the real overlay running below, driven by a simulated chat —
+      messages spawn cats, commands trigger duels, races and boss battles.</p>
+    <div class="demo-frame">
+      <iframe class="nub-demo" src="./overlay/index.html?mock=1" loading="lazy"
+        title="Nub Chat Pets live demo running a simulated Twitch chat"></iframe>
+    </div>
+    <div class="demo-meta">
+      <span>simulated chat · nothing leaves your browser</span>
+      <a href="./overlay/index.html?mock=1" target="_blank" rel="noopener">Open fullscreen ↗</a>
     </div>
   </section>
 

@@ -84,12 +84,14 @@ try {
   // ---- phase A: landing ----
   await send(ws, "Page.navigate", { url: `${origin}/index.html` });
   await sleep(2500);
-  const landing = await run(`JSON.stringify({
+  const landing = JSON.parse(await run(`JSON.stringify({
     title: document.title,
     heroDemo: document.querySelector(".hero-actions .btn-primary")?.getAttribute("href"),
-    sections: ["games","setup","params","faq"].every(id => !!document.getElementById(id)),
-  })`);
-  console.log("LANDING:", landing);
+    sections: ["games","setup","params","faq","demo"].every(id => !!document.getElementById(id)),
+  })`));
+  const heroOk = landing.heroDemo === "./overlay/index.html?mock=1";
+  console.log(`LANDING ${heroOk && landing.sections ? "OK" : "FAIL"}:`, JSON.stringify(landing));
+  if (!heroOk || !landing.sections) fail++;
   await shotTo("/tmp/nubcat-landing.png");
 
   // scrollspy check
@@ -100,6 +102,22 @@ try {
   );
   console.log(`SCROLLSPY ${active === "Settings" ? "OK" : "FAIL"} active=${active}`);
   if (active !== "Settings") fail++;
+
+  // embedded live demo boots inside the iframe (same-origin access)
+  await run(`document.getElementById("demo").scrollIntoView()`);
+  let frameCanvas = false;
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000);
+    frameCanvas = await run(
+      `(() => { try { const f = document.querySelector("iframe.nub-demo");
+         return !!(f && f.contentWindow && f.contentWindow.document && f.contentWindow.document.querySelector("canvas")); } catch { return false; } })()`
+    );
+    if (frameCanvas) break;
+  }
+  console.log(`DEMOFRAME ${frameCanvas ? "OK" : "FAIL"} iframe-canvas=${frameCanvas}`);
+  if (!frameCanvas) fail++;
+  await sleep(4000); // let cats spawn before the screenshot
+  await shotTo("/tmp/nubcat-demo-frame.png");
 
   // ---- phase B: overlay boot in mock mode ----
   errors.length = 0;
