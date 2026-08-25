@@ -38,7 +38,7 @@ body {
 ::selection { background: #cfe3fa; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
 
-a:focus-visible, summary:focus-visible {
+a:focus-visible, summary:focus-visible, button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 6px;
@@ -172,8 +172,17 @@ code {
   font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px;
   padding: 1px 7px; border-radius: 6px; word-break: break-all;
 }
-.copy-url { margin-top: 8px; }
+.copy-url { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .copy-url code { font-size: 13px; padding: 6px 10px; display: inline-block; }
+.copy-btn {
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border-firm);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 /* params table */
 .table-card {
@@ -312,7 +321,9 @@ footer a:hover { text-decoration: underline; }
         <div>
           <h3>Copy the overlay URL</h3>
           <p>Swap <code>yourname</code> for your Twitch channel name:</p>
-          <p class="copy-url"><code>devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname</code></p>
+          <p class="copy-url"><code id="overlay-url">devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname</code>
+            <button type="button" class="copy-btn" data-copy-target="overlay-url"
+              data-copy-text="https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname">Copy</button></p>
         </div>
       </div>
       <div class="step">
@@ -494,6 +505,39 @@ footer a:hover { text-decoration: underline; }
   demo.addEventListener("load", send);
   send();
   if (reducedMq.addEventListener) reducedMq.addEventListener("change", send);
+})();
+
+// One-click copy for the OBS overlay URL (clipboard API + execCommand fallback).
+(function () {
+  const fallbackCopy = (text, done) => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;opacity:0;pointer-events:none;";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch {}
+    ta.remove();
+    if (ok) done();
+  };
+  document.querySelectorAll("[data-copy-target]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const text = btn.dataset.copyText ||
+        (document.getElementById(btn.dataset.copyTarget)?.textContent.trim() || "");
+      if (!text) return;
+      const done = () => {
+        const old = btn.textContent;
+        btn.textContent = "Copied ✓";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      } else {
+        fallbackCopy(text, done);
+      }
+    });
+  });
 })();
 </script>
 </body>
