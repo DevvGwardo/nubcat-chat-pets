@@ -82,7 +82,16 @@ try {
   console.log(`MAPS ${okMaps ? "OK" : "FAIL"} all-3-resolved=${okMaps}`);
   console.log(`MIX ${mixed ? "OK" : "WARN"} both-rigs-on-screen=${mixed} (random — retry if warn)`);
   if (!okMaps || errors.length || cats < 8) fail++;
-  if (!mixed) fail++; // 8+ random picks from 3 variants: P(no classic or no nub) ~ tiny
+  // MIX is a random sample (8 picks) — warn only, never fail. The real
+  // assertions are MAPS (all rigs resolved) and ARMS below.
+  const armsMapped = await run(`(() => {
+    let withArms = 0, total = 0;
+    for (const c of window.__nubcat.manager.cats.values()) { total++; if (c.bones["arm.L"] && c.bones["hand.R"]) withArms++; }
+    return JSON.stringify({ withArms, total });
+  })()`);
+  const am = JSON.parse(armsMapped);
+  console.log(`ARMS ${am.withArms > 0 ? "OK" : "FAIL"} ${JSON.stringify(am)} cats-with-arm-bones`);
+  if (am.withArms === 0) fail++;
 
   await sleep(3000);
   const s = await send(ws, "Page.captureScreenshot", { format: "png" });

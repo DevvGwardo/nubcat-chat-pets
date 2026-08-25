@@ -364,10 +364,17 @@ export class Cat {
   applyWalkPose(swing, amount, dt) {
     this.easeWalk(amount, dt);
     const amp = 0.65 * this.walkEase;
+    // Diagonal gait: opposite legs swing together, arms counter-swing
+    // against their same-side leg (like a real walk cycle).
     this.setBone("leg.L", swing * amp, 0, 0);
     this.setBone("leg.R", -swing * amp, 0, 0);
     this.setBone("paw.L", -swing * amp * 0.6, 0, 0);
     this.setBone("paw.R", swing * amp * 0.6, 0, 0);
+    if (this.bones["arm.L"]) {
+      const armAmp = 0.45 * this.walkEase;
+      this.setBone("arm.L", -swing * armAmp, 0, 0);
+      this.setBone("arm.R", swing * armAmp, 0, 0);
+    }
     const body = this.bones["body"];
     if (body) {
       this.bodyBob = Math.abs(Math.cos(this.walkPhase)) * 0.05 * this.walkEase;
@@ -394,6 +401,11 @@ export class Cat {
     this.setBoneRaw("leg.R", amp);
     this.setBoneRaw("paw.L", amp * 0.7);
     this.setBoneRaw("paw.R", amp * 0.7);
+    // Tuck arms too — reads as a mid-air flail on jump takeoff.
+    if (this.bones["arm.L"]) {
+      this.setBoneRaw("arm.L", amp * 1.2);
+      this.setBoneRaw("arm.R", amp * 1.2);
+    }
   }
 
   headNod(x) {
@@ -528,12 +540,16 @@ export async function prepareCatPrototype(loader, url, textureUrl) {
 
 // Canonical bone names the animation code uses -> per-rig actual names.
 const BONE_ALIASES = [
-  // classic cat.fbx rig: only body/head exist under these names (runtime-verified;
-  // the rig's legL/pawL bones have never matched the legacy "leg.L" lookups,
-  // so classic cats animate via body bob + head nod alone — preserved as-is)
-  { body: "body", head: "head" },
-  // mixamo-style nub rigs (naked_nub.fbx / pink_nub.fbx): full leg/foot mapping
-  { body: "Root_hip", head: "Head", "leg.L": "Leg_L", "leg.R": "Leg_R", "paw.L": "Foot_L", "paw.R": "Foot_R" },
+  // classic cat.fbx rig: legL/pawL bones exist but were never wired before —
+  // mapping them here gives the classic cat a real leg walk for the first time
+  { body: "body", head: "head", "leg.L": "legL", "leg.R": "legR", "paw.L": "pawL", "paw.R": "pawR" },
+  // mixamo-style nub rigs (naked_nub.fbx / pink_nub.fbx): full limbs incl. arms
+  {
+    body: "Root_hip", head: "Head",
+    "leg.L": "Leg_L", "leg.R": "Leg_R", "paw.L": "Foot_L", "paw.R": "Foot_R",
+    "arm.L": "Arm_L", "arm.R": "Arm_R",
+    "hand.L": "Hand_L", "hand.R": "Hand_R",
+  },
 ];
 
 function detectBoneMap(root) {
