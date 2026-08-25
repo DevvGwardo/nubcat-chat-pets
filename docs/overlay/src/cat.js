@@ -83,6 +83,21 @@ export class Cat {
       }
     });
 
+    // The nub rigs rest in T-pose (arms straight out). Bake a permanent
+    // "arms down by the sides" offset into the stored rest pose — every
+    // pose helper composes on top of this.rest, so idle, walk, sit, KO and
+    // jump all inherit relaxed arms without touching their own amplitudes.
+    const ARM_DOWN_X = 1.25; // rad, arms rotate down toward the body
+    for (const side of ["L", "R"]) {
+      const key = `arm.${side}`;
+      if (this.bones[key]) {
+        // Mirror: left/right arms rotate in opposite directions to come down.
+        const down = qFromEuler(0, 0, key === "arm.L" ? ARM_DOWN_X : -ARM_DOWN_X);
+        this.rest[key].multiply(down);
+        this.bones[key].quaternion.copy(this.rest[key]);
+      }
+    }
+
     // Soft blob shadow under the cat.
     this.shadow = new THREE.Mesh(
       new THREE.PlaneGeometry(1, 1),

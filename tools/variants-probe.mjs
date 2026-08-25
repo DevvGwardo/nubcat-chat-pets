@@ -98,7 +98,7 @@ try {
   writeFileSync("/tmp/nubcat-variants.png", Buffer.from(s.data, "base64"));
   console.log("shot: /tmp/nubcat-variants.png");
   chrome.kill("SIGKILL"); server.close();
-  rmSync(PROFILE, { recursive: true, force: true });
+  try { rmSync(PROFILE, { recursive: true, force: true, maxRetries: 3 }); } catch {}
   process.exit(fail ? 1 : 0);
 } catch (e) {
   console.error("PROBE ERROR:", e.message);
