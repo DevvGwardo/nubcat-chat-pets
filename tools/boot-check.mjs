@@ -178,6 +178,20 @@ try {
   console.log(`ROOTBOOT ${rootCats >= 8 && errors.length === 0 ? "OK" : "FAIL"} cats=${rootCats} errors=${errors.length ? errors.join(" | ") : "none"}`);
   if (rootCats < 8 || errors.length) fail++;
 
+  // ---- phase D: blank overlay shows the config hint (no params) ----
+  // g11 asserts the hint string exists in the HTML; this proves it renders.
+  errors.length = 0;
+  await send(ws, "Page.navigate", { url: `${origin}/overlay/index.html` });
+  await sleep(1500);
+  const hint = JSON.parse(await run(`JSON.stringify((() => {
+    const el = [...document.querySelectorAll("div")].find((d) => d.textContent.includes("No chat source set"));
+    if (!el) return { found: false };
+    const r = el.getBoundingClientRect();
+    return { found: true, visible: r.height > 0 && r.width > 0 && getComputedStyle(el).display !== "none", bottom: Math.round(r.bottom) };
+  })())`));
+  console.log(`HINT ${hint.found && hint.visible && errors.length === 0 ? "OK" : "FAIL"} ${JSON.stringify(hint)} errors=${errors.length ? errors.join(" | ") : "none"}`);
+  if (!hint.found || !hint.visible || errors.length) fail++;
+
   chrome.kill("SIGKILL");
   server.close();
   rootServer.close();

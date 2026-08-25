@@ -85,6 +85,11 @@
   EXPECT: /ROOTBOOT OK/
   EVIDENCE: ROOTBOOT OK cats=9 errors=none
 
+- [x] g18-blank-overlay-hint: overlay loaded without channel/mock shows the "No chat source set" hint on screen
+  CHECK: node tools/boot-check.mjs
+  EXPECT: /HINT OK/
+  EVIDENCE: HINT OK {"found":true,"visible":true} errors=none
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.
