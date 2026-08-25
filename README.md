@@ -6,10 +6,22 @@ chat. Pet behavior (roaming, hop reactions, celebration jumps, hearts) is
 ported from the Hermes agent pet system; the cat is `cat.fbx` from the silly
 nub cat meme pack, rigged and procedurally animated (no baked animations).
 
-## Run
+Live demo + setup guide: <https://devvgwardo.github.io/nubcat-chat-pets/>
+
+## Quickstart (hosted — no clone needed)
+
+1. **OBS** → Sources → **+** → **Browser**.
+2. URL: `https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname`
+   (swap `yourname` for your Twitch channel; nothing else to configure).
+3. Width/Height: your canvas size (e.g. 1920×1080). The page background is
+   fully transparent — only cats, labels, and bubbles composite onto the stream.
+4. Try it first without OBS: open the same URL with `?mock=1` for a simulated
+   chat, or see the live demo on the landing page.
+
+## Run locally
 
 ```bash
-cd ~/nubcat-chat-pets
+cd nubcat-chat-pets
 python3 -m http.server 8741
 ```
 
@@ -19,13 +31,9 @@ Then open:
 - **Test mode:** `http://localhost:8741/index.html?mock=1&debug=1`
   (simulated chat, checkerboard bg + stats HUD)
 
-## OBS setup
-
-1. Sources → **+** → **Browser**.
-2. URL: `http://localhost:8741/index.html?channel=yourname`
-3. Width/Height: your canvas size (e.g. 1920×1080). The page background is
-   fully transparent — only cats, labels, and bubbles composite onto the stream.
-4. Tick "Shutdown source when not visible" if you want it to pause when hidden.
+The repo root and `docs/` each carry a full copy of the overlay
+(`docs/overlay/` is what the hosted site serves). Both copies are kept
+byte-identical by the gate suite.
 
 ## Options (URL params)
 
@@ -69,6 +77,9 @@ Then open:
 - Cats roam when idle, pause, look around, and separate so they don't stack.
 - Raids / subs / sub-gifts trigger a group celebration + announcement.
 - Quiet viewers despawn after the TTL so the crowd reflects live chat.
+- **Zero wasted frames:** the render loop pauses when the tab is hidden or the
+  demo is scrolled out of view, and honors `prefers-reduced-motion` — a
+  background tab burns no GPU at all.
 
 ## Mini games
 
@@ -92,27 +103,45 @@ cooldowns, all visual-only (nothing breaks the transparent OBS compositing).
 Chatting earns points (localStorage, `nubcat_points_v1`), which feed duel odds
 and show in the debug HUD. Turn everything off with `?games=0`.
 
+## Verification (gate suite)
+
+All checkers are plain Node (`tools/*.mjs`), no dependencies:
+
+```bash
+node tools/check-links.mjs            # anchors + no localhost links on the landing
+node tools/check-overlay-assets.mjs   # every overlay asset 200s + root/docs copies in sync
+node tools/boot-check.mjs             # headless Chrome: landing, scrollspy, demo iframe,
+                                      #   mobile viewport, overlay boot, root-copy boot
+node tools/games-test.mjs             # headless Chrome: asserts duel/race/boss/simon logic
+```
+
+`GATES.md` tracks the 17 gates; the live deployment is re-booted headless with
+`NUB_ORIGIN=https://devvgwardo.github.io/nubcat-chat-pets/ node tools/boot-check.mjs`.
+
 ## Files
 
 ```
-index.html        shell + bubble/game CSS + error banner
-src/main.js       boot, render loop, HUD, camera shake
-src/scene.js      transparent three.js stage, camera, lights, ground bounds
-src/cat.js        Cat class: Hermes state machine driving the FBX rig
-src/manager.js    spawn/recycle, bubbles, hearts, celebrations, separation
-src/games.js      GameDirector: duels, races, boss battles, simon says
-src/fx.js         shared particles (stars, coins, dust) + screen shake
-src/points.js     localStorage points per viewer
-src/chat.js       anonymous Twitch IRC-over-WebSocket client
-src/mock.js       fake chat for testing (also fires game commands)
-src/config.js     URL-param config
-tools/verify.mjs  headless-Chrome real-time verification driver
-tools/games-test.mjs  programmatic exercise of every mini game
-assets/           cat.fbx + texture.png
+docs/index.html       landing page (demo, setup, params, FAQ)
+docs/overlay/         hosted overlay copy (served by GitHub Pages)
+index.html            repo-root overlay copy (for local/OBS hosting)
+src/                  overlay source (mirrored in docs/overlay/src/)
+  main.js             boot, render loop (auto-pauses when hidden), HUD
+  scene.js            transparent three.js stage, camera, lights, ground bounds
+  cat.js              Cat class: Hermes state machine driving the FBX rig
+  manager.js          spawn/recycle, bubbles, hearts, celebrations, separation
+  games.js            GameDirector: duels, races, boss battles, simon says
+  fx.js               shared particles (stars, coins, dust) + screen shake
+  points.js           localStorage points per viewer
+  chat.js             anonymous Twitch IRC-over-WebSocket client
+  mock.js             fake chat for testing (also fires game commands)
+  config.js           URL-param config
+tools/                gate checkers (see Verification)
+GATES.md              gate list + evidence
+assets/               cat.fbx + texture.png
 ```
 
 ## Notes
 
 - Requires internet at runtime: three.js loads from jsdelivr CDN.
-- Verified headless: 21 pets @ ~57 fps in SwiftShader (software GL); real GPUs
-  will do much better. Zero console errors.
+- Render loop auto-pauses when hidden/off-screen and honors
+  `prefers-reduced-motion` (no always-on animation cost).
