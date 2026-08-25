@@ -56,6 +56,15 @@ function getShadowTexture() {
   return shadowTex;
 }
 
+// Tunable pose constants — the workbench page mutates these live.
+export const POSE = {
+  armDown: 1.25, // rad, arms rotate from T-pose down to the sides
+  walkArm: 0.45, // rad, arm counter-swing amplitude at full walk
+  jumpArm: 1.2, // multiplier on leg tuck for arms during jumps
+  walkLeg: 0.65, // rad, leg swing amplitude
+  headNod: 0.08, // rad, head bob while walking
+};
+
 export class Cat {
   // proto: prepared prototype { scene, height } from prepareCatPrototype().
   constructor(proto, name, color, bounds) {
@@ -87,7 +96,7 @@ export class Cat {
     // "arms down by the sides" offset into the stored rest pose — every
     // pose helper composes on top of this.rest, so idle, walk, sit, KO and
     // jump all inherit relaxed arms without touching their own amplitudes.
-    const ARM_DOWN_X = 1.25; // rad, arms rotate down toward the body
+    const ARM_DOWN_X = POSE.armDown; // rad, arms rotate down toward the body
     for (const side of ["L", "R"]) {
       const key = `arm.${side}`;
       if (this.bones[key]) {
@@ -378,7 +387,7 @@ export class Cat {
   // --- pose helpers -----------------------------------------------------
   applyWalkPose(swing, amount, dt) {
     this.easeWalk(amount, dt);
-    const amp = 0.65 * this.walkEase;
+    const amp = POSE.walkLeg * this.walkEase;
     // Diagonal gait: opposite legs swing together, arms counter-swing
     // against their same-side leg (like a real walk cycle).
     this.setBone("leg.L", swing * amp, 0, 0);
@@ -386,7 +395,7 @@ export class Cat {
     this.setBone("paw.L", -swing * amp * 0.6, 0, 0);
     this.setBone("paw.R", swing * amp * 0.6, 0, 0);
     if (this.bones["arm.L"]) {
-      const armAmp = 0.45 * this.walkEase;
+      const armAmp = POSE.walkArm * this.walkEase;
       this.setBone("arm.L", -swing * armAmp, 0, 0);
       this.setBone("arm.R", swing * armAmp, 0, 0);
     }
@@ -398,7 +407,7 @@ export class Cat {
         .multiply(qFromEuler(swing * 0.04, 0, swing * 0.06));
       body.scale.setScalar(1);
     }
-    this.headNod(swing * 0.08);
+    this.headNod(swing * POSE.headNod);
     this.root.position.y = this.baseY + this.bodyBob;
   }
 
@@ -418,8 +427,8 @@ export class Cat {
     this.setBoneRaw("paw.R", amp * 0.7);
     // Tuck arms too — reads as a mid-air flail on jump takeoff.
     if (this.bones["arm.L"]) {
-      this.setBoneRaw("arm.L", amp * 1.2);
-      this.setBoneRaw("arm.R", amp * 1.2);
+      this.setBoneRaw("arm.L", amp * POSE.jumpArm);
+      this.setBoneRaw("arm.R", amp * POSE.jumpArm);
     }
   }
 

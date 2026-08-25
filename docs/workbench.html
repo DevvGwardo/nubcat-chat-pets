@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nub Arm Workbench — pose tuning</title>
+<style>
+  :root {
+    --bg: #10131a; --panel: #171b24; --border: #2a3040;
+    --ink: #e8ecf4; --muted: #93a0b4; --accent: #5da9ff; --ok: #35c26e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--bg); color: var(--ink); font-size: 13px;
+    display: flex; height: 100vh;
+  }
+  /* left: the stage */
+  #stage { flex: 1; position: relative; min-width: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: absolute; top: 10px; left: 10px; z-index: 5;
+    background: rgba(16,19,26,0.85); border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 8px; color: var(--muted); font-size: 12px;
+  }
+  #err {
+    position: absolute; top: 10px; right: 10px; z-index: 6; max-width: 60%;
+    color: #ff7a90; white-space: pre-wrap; font-size: 12px;
+  }
+  /* right: controls */
+  #controls {
+    width: 340px; flex-shrink: 0; overflow-y: auto;
+    background: var(--panel); border-left: 1px solid var(--border);
+    padding: 14px;
+  }
+  h1 { font-size: 14px; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 11.5px; margin-bottom: 12px; }
+  .group { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+  .group h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin: 0 0 8px; }
+  label.row { display: flex; align-items: center; gap: 8px; margin: 7px 0; }
+  label.row span.name { width: 88px; color: var(--muted); flex-shrink: 0; }
+  label.row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+  label.row output { width: 52px; text-align: right; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  button {
+    font-family: inherit; font-size: 12.5px; padding: 7px 14px; cursor: pointer;
+    border-radius: 8px; border: 1px solid var(--border-firm, #3a4souhait); 
+  }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btnrow button {
+    flex: 1; background: #1d2330; color: var(--ink); border: 1px solid var(--border);
+  }
+  .btnrow button:hover { border-color: var(--accent); color: var(--accent); }
+  .btnrow button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btnrow.primary button { background: var(--accent); color: #fff; border-color: var(--accent); }
+  textarea#export {
+    width: 100%; height: 84px; resize: vertical; margin-top: 8px;
+    background: #0c0f15; color: var(--ok); border: 1px solid var(--border);
+    border-radius: 8px; font-family: inherit; font-size: 11.5px; padding: 8px;
+  }
+  .variant-pick { display: flex; gap: 6px; margin-bottom: 10px; }
+  .variant-pick button { flex: 1; background:#1d2330; color: var(--muted); border: 1px solid var(--border); padding: 6px 4px; }
+  .variant-pick button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage">
+  <div id="hud">loading rigs…</div>
+  <div id="err"></div>
+</div>
+<div id="controls">
+  <h1>Arm / hand workbench</h1>
+  <div class="sub">Live pose tuning on the real overlay rigs. Values export straight into cat.js POSE.</div>
+
+  <div class="group">
+    <h2>Variant</h2>
+    <div class="variant-pick" id="variant-pick">
+      <button data-v="0" class="on">classic</button>
+      <button data-v="1">naked nub</button>
+      <button data-v="2">pink nub</button>
+      <button data-v="3">all three</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <h2>Arms</h2>
+    <label class="row"><span class="name">arm down</span>
+      <input type="range" id="p-armDown" min="0" max="2.2" step="0.05" value="1.25"><output>1.25</output></label>
+    <label class="row"><span class="name">walk swing</span>
+      <input type="range" id="p-walkArm" min="0" max="1.2" step="0.05" value="0.45"><output>0.45</output></label>
+    <label class="row"><span class="name">jump flail</span>
+      <input type="range" id="p-jumpArm" min="0" max="3" step="0.1" value="1.2"><output>1.2</output></label>
+  </div>
+
+  <div class="group">
+    <h2>Gait</h2>
+    <label class="row"><span class="name">leg swing</span>
+      <input type="range" id="p-walkLeg" min="0" max="1.4" step="0.05" value="0.65"><output>0.65</output></label>
+    <label class="row"><span class="name">head nod</span>
+      <input type="range" id="p-headNod" min="0" max="0.3" step="0.01" value="0.08"><output>0.08</output></label>
+  </div>
+
+  <div class="group">
+    <h2>Motion</h2>
+    <div class="btnrow">
+      <button id="b-idle" class="on">idle</button>
+      <button id="b-walk">walk</button>
+      <button id="b-jump">jump</button>
+    </div>
+    <div class="btnrow" style="margin-top:8px">
+      <button id="b-rotate">turntable: off</button>
+    </div>
+  </div>
+
+  <div class="group primary group-export">
+    <h2>Export</h2>
+    <div class="btnrow">
+      <button id="b-copy">copy POSE</button>
+      <button id="b-reset">reset</button>
+    </div>
+    <textarea id="export" readonly></textarea>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { clone as cloneSkeleton } from "three/addons/utils/SkeletonUtils.js";
+import { prepareCatPrototype, Cat, POSE } from "./src/cat.js";
+
+const errBox = document.getElementById("err");
+window.addEventListener("error", (e) => { errBox.textContent = String(e.message || e); });
+const hud = document.getElementById("hud");
+
+// --- scene ---------------------------------------------------------------
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(stage.clientWidth, stage.clientHeight);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a2030);
+const camera = new THREE.PerspectiveCamera(38, stage.clientWidth / stage.clientHeight, 0.1, 100);
+camera.position.set(0, 1.4, 4.2);
+camera.lookAt(0, 0.55, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 1.4);
+key.position.set(2, 4, 3);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x88aaff, 0.5);
+rim.position.set(-3, 2, -2);
+scene.add(rim);
+
+// ground
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(6, 48),
+  new THREE.MeshStandardMaterial({ color: 0x232a3a, roughness: 1 })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// --- load the real rigs through the REAL pipeline -------------------------
+const loader = new FBXLoader();
+const protos = await Promise.all(
+  ["assets/cat.fbx", "assets/naked_nub.fbx", "assets/pink_nub.fbx"].map((f) =>
+    prepareCatPrototype(loader, `assets/${f}`, "assets/texture.png")
+  )
+);
+
+const bounds = { minX: -1.2, maxX: 1.2, minZ: -0.4, maxZ: 0.4 };
+let cats = [];
+function spawnSet(which) {
+  for (const c of cats) { scene.remove(c.root, c.shadow, c.label); }
+  cats = [];
+  const list = which === 3 ? [0, 1, 2] : [which];
+  const spread = which === 3 ? [-1.4, 0, 1.4] : [0];
+  list.forEach((pi, i) => {
+    const cat = new Cat(protos[pi], ["classic", "naked", "pink"][pi], "#ffffff", bounds);
+    // park them and freeze movement — we drive poses manually below
+    cat.gameLock = true;
+    cat.mode = "idle";
+    cat.root.position.set(spread[i], 0, 0);
+    if (which !== 3) cat.root.scale.multiplyScalar(1.9);
+    scene.add(cat.root, cat.shadow, cat.label);
+    cats.push({ cat, pi });
+  });
+}
+spawnSet(1); // default: naked nub (the one that looked worst)
+
+// --- manual pose driver ---------------------------------------------------
+// We don't run Cat.update (that roams). We apply the same pose math directly
+// so sliders are readable frame to frame.
+let phase = 0;
+let motion = "idle"; let turntable = false;
+const clock = new THREE.Clock();
+
+function applyPose(dt) {
+  phase += dt * 6;
+  const swing = Math.sin(phase);
+  for (const { cat } of cats) {
+    const ease = motion === "walk" ? 1 : 0;
+    if (motion === "walk") {
+      const amp = POSE.walkLeg;
+      cat.setBone("leg.L", swing * amp, 0, 0);
+      cat.setBone("leg.R", -swing * amp, 0, 0);
+      cat.setBone("paw.L", -swing * amp * 0.6, 0, 0);
+      cat.setBone("paw.R", swing * amp * 0.6, 0, 0);
+      if (cat.bones["arm.L"]) {
+        const armAmp = POSE.walkArm;
+        cat.setBone("arm.L", -swing * armAmp, 0, 0);
+        cat.setBone("arm.R", swing * armAmp, 0, 0);
+      }
+      const body = cat.bones["body"];
+      if (body) {
+        body.quaternion.copy(cat.rest["body"]).multiply(
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(swing * 0.04, 0, swing * 0.06))
+        );
+      }
+      cat.headNod(swing * POSE.headNod);
+    } else if (motion === "jump") {
+      const t = (phase / Math.PI) % 1; // loop a hop
+      const k = Math.sin(t * Math.PI);
+      cat.tuckLegs(k);
+      cat.root.position.y = k * 0.45;
+    } else {
+      cat.applyRest();
+      cat.headNod(Math.sin(phase * 0.35) * POSE.headNod * 1.4); // idle breathing nod
+    }
+  }
+}
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  applyPose(dt);
+  if (turntable) {
+    for (const { cat } of cats) cat.root.rotation.y += dt * 0.8;
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+
+new ResizeObserver(() => {
+  camera.aspect = stage.clientWidth / stage.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(stage.clientWidth, stage.clientHeight);
+}).observe(stage);
+
+// --- controls -------------------------------------------------------------
+const outEls = {};
+for (const key of Object.keys(POSE)) {
+  const input = document.getElementById(`p-${key}`);
+  const out = input.parentElement.querySelector("output");
+  outEls[key] = out;
+  input.addEventListener("input", () => {
+    POSE[key] = parseFloat(input.value);
+    out.textContent = input.value;
+    // armDown bakes into rest at construction — rebuild cats live
+    if (key === "armDown") spawnSet(currentVariant);
+    refreshExport();
+  });
+}
+
+function refreshExport() {
+  document.getElementById("export").value =
+    `export const POSE = {\n` +
+    Object.entries(POSE).map(([k, v]) => `  ${k}: ${v},`).join("\n") +
+    `\n};`;
+}
+refreshExport();
+
+let currentVariant = 1;
+document.getElementById("variant-pick").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-v]");
+  if (!btn) return;
+  document.querySelectorAll("#variant-pick button").forEach((b) => b.classList.toggle("on", b === btn));
+  currentVariant = parseInt(btn.dataset.v, 10);
+  spawnSet(currentVariant);
+});
+
+const motionBtns = { idle: document.getElementById("b-idle"), walk: document.getElementById("b-walk"), jump: document.getElementById("b-jump") };
+for (const [name, btn] of Object.entries(motionBtns)) {
+  btn.addEventListener("click", () => {
+    motion = name;
+    Object.values(motionBtns).forEach((b) => b.classList.toggle("on", b === btn));
+    for (const { cat } of cats) cat.root.position.y = 0;
+  });
+}
+const rotBtn = document.getElementById("b-rotate");
+rotBtn.addEventListener("click", () => {
+  turntable = !turntable;
+  rotBtn.textContent = `turntable: ${turntable ? "on" : "off"}`;
+  rotBtn.classList.toggle("on", turntable);
+});
+document.getElementById("b-copy").addEventListener("click", async () => {
+  const ta = document.getElementById("export");
+  ta.select();
+  try { await navigator.clipboard.writeText(ta.value); } catch { document.execCommand("copy"); }
+  document.getElementById("b-copy").textContent = "copied ✓";
+  setTimeout(() => { document.getElementById("b-copy").textContent = "copy POSE"; }, 1200);
+});
+document.getElementById("b-reset").addEventListener("click", () => {
+  const defaults = { armDown: 1.25, walkArm: 0.45, jumpArm: 1.2, walkLeg: 0.65, headNod: 0.08 };
+  for (const [k, v] of Object.entries(defaults)) {
+    POSE[k] = v;
+    const input = document.getElementById(`p-${k}`);
+    input.value = v;
+    outEls[k].textContent = v;
+  }
+  spawnSet(currentVariant);
+  refreshExport();
+});
+
+hud.textContent = `${protos.length} rigs loaded · ${cats.length} on stage · arm bones: ${protos[1].boneMap ? "mapped" : "none"}`;
+window.__wb = { protos, get cats() { return cats; }, POSE };
+</script>
+</body>
+</html>
