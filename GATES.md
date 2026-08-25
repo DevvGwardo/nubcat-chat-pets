@@ -75,6 +75,11 @@
   EXPECT: /GAMES OK/
   EVIDENCE: 11/11 OK (duel charge->clash->crown, race finish->clear, boss spawn->defeat, simon) | JS_ERRORS: none
 
+- [x] g16-mobile-viewport: landing at 375px device width has no horizontal overflow, hero CTA fits, nav collapses to CTA, zero JS errors
+  CHECK: node tools/boot-check.mjs
+  EXPECT: /MOBILE OK/
+  EVIDENCE: MOBILE OK deviceW=375 vw=375 scrollW=375 heroBtn=182 navLinksCollapsed=true errors=0
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.

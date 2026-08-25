@@ -120,6 +120,31 @@ try {
   await sleep(4000); // let cats spawn before the screenshot
   await shotTo("/tmp/nubcat-demo-frame.png");
 
+  // ---- phase A2: mobile viewport (375x812) ----
+  // Every other phase runs at desktop width; catch responsive breakage here:
+  // no horizontal overflow, the hero CTA fits, the nav collapses to the CTA.
+  await send(ws, "Emulation.setDeviceMetricsOverride", { width: 375, height: 812, deviceScaleFactor: 1, mobile: true });
+  errors.length = 0;
+  await send(ws, "Page.navigate", { url: `${origin}/index.html` });
+  await sleep(2500);
+  const mobile = JSON.parse(await run(`JSON.stringify({
+    vw: window.innerWidth,
+    deviceW: screen.width,
+    scrollW: document.documentElement.scrollWidth,
+    heroBtn: (() => { const r = document.querySelector(".hero-actions .btn-primary")?.getBoundingClientRect(); return r ? Math.round(r.width) : 0; })(),
+    navCta: (() => { const a = document.querySelector(".nav-cta"); return a ? getComputedStyle(a).display !== "none" : false; })(),
+    navLinks: (() => { const a = document.querySelector(".nav-links a[href='#games']"); return a ? getComputedStyle(a).display !== "none" : null; })(),
+  })`));
+  // Compare against the DEVICE width, not the layout viewport — content with a
+  // min-width can silently expand the layout viewport and hide overflow.
+  const noOverflow = mobile.scrollW <= mobile.deviceW + 1;
+  const heroFits = mobile.heroBtn > 0 && mobile.heroBtn <= mobile.deviceW;
+  const ctaVisible = mobile.navCta === true;
+  console.log(`MOBILE ${noOverflow && heroFits && ctaVisible && errors.length === 0 ? "OK" : "FAIL"} deviceW=${mobile.deviceW} vw=${mobile.vw} scrollW=${mobile.scrollW} heroBtn=${mobile.heroBtn} navLinksCollapsed=${mobile.navLinks === false} errors=${errors.length}`);
+  if (!noOverflow || !heroFits || !ctaVisible || errors.length) fail++;
+  await send(ws, "Emulation.clearDeviceMetricsOverride");
+  errors.length = 0;
+
   // ---- phase B: overlay boot in mock mode ----
   errors.length = 0;
   await send(ws, "Page.navigate", { url: `${origin}/overlay/index.html?mock=1&debug=1` });
