@@ -63,7 +63,16 @@ async function boot() {
 
   if (config.mock) {
     setHud("mock chat");
-    new MockChat(handlers).start();
+    // Drop simulated messages while the render loop is paused (hidden tab,
+    // off-screen demo, reduced-motion) — otherwise cats/hearts accumulate
+    // invisibly with no frames running to clean them up. Real chat is never
+    // gated: a returning streamer wants the crowd to have kept chatting.
+    const gated = (fn) => (msg) => { if (running) fn(msg); };
+    new MockChat({
+      onMessage: gated(handlers.onMessage),
+      onNotice: gated(handlers.onNotice),
+      onStatus: handlers.onStatus,
+    }).start();
   } else if (config.channel) {
     new TwitchChat(config.channel, handlers).connect();
   } else {

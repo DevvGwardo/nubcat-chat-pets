@@ -445,10 +445,19 @@ footer a:hover { text-decoration: underline; }
 (function () {
   const demo = document.querySelector("iframe.nub-demo");
   if (!demo || !("IntersectionObserver" in window)) return;
+  const meta = document.querySelector(".demo-meta span");
+  // Reduced-motion users don't want the demo autoplaying at all.
+  const reducedMq = window.matchMedia("(prefers-reduced-motion: reduce)");
   let offscreen = false;
-  const send = () =>
+  const send = () => {
+    const paused = reducedMq.matches || offscreen;
+    if (meta)
+      meta.textContent = reducedMq.matches
+        ? "demo paused · reduced motion is on — open fullscreen to run it"
+        : "simulated chat · nothing leaves your browser";
     demo.contentWindow &&
-    demo.contentWindow.postMessage({ type: "nubcat-set-paused", paused: offscreen }, "*");
+      demo.contentWindow.postMessage({ type: "nubcat-set-paused", paused }, "*");
+  };
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -462,6 +471,8 @@ footer a:hover { text-decoration: underline; }
   // Re-apply after the lazy iframe loads — a pause sent before the overlay's
   // listener registered would otherwise be lost.
   demo.addEventListener("load", send);
+  send();
+  if (reducedMq.addEventListener) reducedMq.addEventListener("change", send);
 })();
 </script>
 </body>
