@@ -63,7 +63,16 @@ async function boot() {
 
   if (config.mock) {
     setHud("mock chat");
-    new MockChat(handlers).start();
+    // Drop simulated messages while the render loop is paused (hidden tab,
+    // off-screen demo, reduced-motion) — otherwise cats/hearts accumulate
+    // invisibly with no frames running to clean them up. Real chat is never
+    // gated: a returning streamer wants the crowd to have kept chatting.
+    const gated = (fn) => (msg) => { if (running) fn(msg); };
+    new MockChat({
+      onMessage: gated(handlers.onMessage),
+      onNotice: gated(handlers.onNotice),
+      onStatus: handlers.onStatus,
+    }).start();
   } else if (config.channel) {
     new TwitchChat(config.channel, handlers).connect();
   } else {
@@ -81,11 +90,17 @@ window.addEventListener("resize", () => {
 });
 
 // --- render loop ------------------------------------------------------------
+// The loop pauses when the browser stops rendering us (hidden tab / minimized
+// window) and resumes the moment we're visible again. No frames are burned
+// while nobody can see them — keeps CPU/GPU at zero for background tabs like
+// the embedded landing demo, instead of spinning an invisible scene at 60fps.
 const clock = new THREE.Clock();
 let fpsAccum = 0;
 let fpsFrames = 0;
 let fpsText = "…";
 let hudTimer = 0;
+let rafId = 0;
+let running = false;
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -121,8 +136,38 @@ function frame() {
       ` game=${games ? games.stateText : "off"}` +
       ` fx=${games ? games.fx.sprites.length : 0}`;
   }
-  requestAnimationFrame(frame);
+  rafId = requestAnimationFrame(frame);
 }
 
-frame();
+function resumeLoop() {
+  if (running) return;
+  running = true;
+  clock.getDelta(); // discard the stale delta accumulated while paused
+  rafId = requestAnimationFrame(frame);
+}
+
+function pauseLoop() {
+  if (!running) return;
+  running = false;
+  cancelAnimationFrame(rafId);
+}
+
+function syncVisibility() {
+  if (document.visibilityState === "hidden") pauseLoop();
+  else resumeLoop();
+}
+
+// Pause when the browser stops rendering us, resume when it starts again.
+// Run once at startup so a restored hidden tab stays paused until shown.
+document.addEventListener("visibilitychange", syncVisibility);
+syncVisibility();
+
+// Parent pages (e.g. the landing demo) can pause us when we're scrolled out
+// of view — same pause/resume path as the visibility handler.
+window.addEventListener("message", (ev) => {
+  if (ev.data && ev.data.type === "nubcat-set-paused") {
+    if (ev.data.paused) pauseLoop();
+    else resumeLoop();
+  }
+});
 boot();

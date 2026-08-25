@@ -21,17 +21,17 @@
   .bubble {
     position: absolute;
     transform: translate(-50%, -100%);
-    background: rgba(255, 255, 255, 0.96);
+    background: #fffdf7;
     color: #1a1a24;
-    padding: 6px 11px;
-    border-radius: 12px;
+    padding: 7px 12px 8px;
+    border-radius: 14px;
     font-size: 16px;
     line-height: 1.25;
     font-weight: 600;
     max-width: 260px;
     width: max-content;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
-    border: 2px solid rgba(30,30,40,0.85);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28), 0 6px 18px rgba(0, 0, 0, 0.16);
+    border: 2px solid rgba(30, 30, 40, 0.85);
   }
   .bubble::after {
     content: "";
@@ -39,15 +39,18 @@
     left: 50%; bottom: -9px;
     transform: translateX(-50%);
     border: 8px solid transparent;
-    border-top-color: rgba(255,255,255,0.96);
+    border-top-color: #fffdf7;
     border-bottom: none;
   }
   .bubble .who {
-    display: block;
-    font-size: 12px;
+    display: inline-block;
+    font-size: 13px;
     font-weight: 800;
     letter-spacing: 0.02em;
-    margin-bottom: 1px;
+    background: rgba(20, 16, 40, 0.07);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-bottom: 3px;
   }
   .bubble.fade { transition: opacity 0.45s ease; opacity: 0; }
   #hud {
@@ -66,14 +69,14 @@
     position: absolute;
     left: 50%; top: 4%;
     transform: translate(-50%, 0);
-    background: rgba(20, 16, 32, 0.88);
-    color: #ffe66d;
+    background: #fffdf7;
+    color: #1a1a24;
     font-size: 22px;
     font-weight: 800;
     padding: 10px 22px;
     border-radius: 14px;
-    border: 2px solid rgba(255, 214, 63, 0.7);
-    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+    border: 2px solid rgba(255, 205, 40, 0.95);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28), 0 6px 18px rgba(0, 0, 0, 0.16);
     white-space: nowrap;
     z-index: 5;
   }
