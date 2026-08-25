@@ -184,6 +184,24 @@ code {
 .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 .copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
 
+/* url builder */
+.url-builder { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.url-builder input {
+  font-family: inherit; font-size: 13px; padding: 6px 10px;
+  border-radius: 8px; border: 1px solid var(--border-firm);
+  background: #fff; color: var(--ink); width: 170px;
+}
+.url-builder input:focus { outline: none; border-color: var(--accent); }
+.chip-toggle {
+  font-family: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.chip-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.chip-toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
 /* params table */
 .table-card {
   background: var(--surface); border-radius: var(--radius);
@@ -321,6 +339,16 @@ footer a:hover { text-decoration: underline; }
         <div>
           <h3>Copy the overlay URL</h3>
           <p>Swap <code>yourname</code> for your Twitch channel name:</p>
+          <div class="url-builder">
+            <input id="ub-channel" type="text" placeholder="twitch channel name"
+              autocomplete="off" spellcheck="false" aria-label="Twitch channel name">
+            <button type="button" class="chip-toggle" id="ub-max" aria-pressed="false"
+              title="Raise the cat cap to 80">more cats</button>
+            <button type="button" class="chip-toggle" id="ub-scale" aria-pressed="false"
+              title="Scale cats up 20%">big cats</button>
+            <button type="button" class="chip-toggle" id="ub-bubbles" aria-pressed="true"
+              title="Toggle speech bubbles">bubbles</button>
+          </div>
           <p class="copy-url"><code id="overlay-url">devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname</code>
             <button type="button" class="copy-btn" data-copy-target="overlay-url"
               data-copy-text="https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname">Copy</button></p>
@@ -513,6 +541,41 @@ footer a:hover { text-decoration: underline; }
   demo.addEventListener("load", send);
   send();
   if (reducedMq.addEventListener) reducedMq.addEventListener("change", send);
+})();
+
+// URL builder: type a channel, toggle presets — the OBS URL updates live.
+(function () {
+  const BASE = "https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html";
+  const input = document.getElementById("ub-channel");
+  const code = document.getElementById("overlay-url");
+  const copyBtn = document.querySelector('.copy-btn[data-copy-target="overlay-url"]');
+  if (!input || !code || !copyBtn) return;
+  const toggles = {
+    max: document.getElementById("ub-max"),
+    scale: document.getElementById("ub-scale"),
+    bubbles: document.getElementById("ub-bubbles"),
+  };
+  const update = () => {
+    const channel = input.value.trim();
+    const params = new URLSearchParams();
+    if (channel) params.set("channel", channel);
+    if (toggles.max?.getAttribute("aria-pressed") === "true") params.set("max", "80");
+    if (toggles.scale?.getAttribute("aria-pressed") === "true") params.set("scale", "1.2");
+    if (toggles.bubbles?.getAttribute("aria-pressed") === "false") params.set("bubbles", "0");
+    const qs = params.toString();
+    const url = qs ? `${BASE}?${qs}` : `${BASE}?channel=yourname`;
+    // display copy stays relative like before; the Copy button carries the full https:// URL
+    code.textContent = url.replace(/^https:\/\//, "");
+    copyBtn.dataset.copyText = url;
+  };
+  input.addEventListener("input", update);
+  Object.values(toggles).forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      btn.setAttribute("aria-pressed", btn.getAttribute("aria-pressed") !== "true" ? "true" : "false");
+      update();
+    });
+  });
 })();
 
 // One-click copy for the OBS overlay URL (clipboard API + execCommand fallback).
