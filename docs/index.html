@@ -179,13 +179,14 @@ code {
 .copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 /* url builder */
-.url-builder { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.url-builder input {
+.url-builder { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.ub-toggles { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.url-builder input[type="text"] {
   font-family: inherit; font-size: 13px; padding: 6px 10px;
   border-radius: 8px; border: 1px solid var(--border-firm);
   background: #fff; color: var(--ink); width: 170px;
 }
-.url-builder input:focus { outline: none; border-color: var(--accent); }
+.url-builder input[type="text"]:focus { outline: none; border-color: var(--accent); }
 .chip-toggle {
   font-family: inherit; font-size: 12.5px; font-weight: 600;
   padding: 5px 12px; border-radius: 999px; cursor: pointer;
@@ -195,6 +196,14 @@ code {
 }
 .chip-toggle:hover { border-color: var(--accent); color: var(--accent); }
 .chip-toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ub-sliders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; max-width: 560px; }
+@media (max-width: 640px) { .ub-sliders { grid-template-columns: 1fr; } }
+.ub-sliders label {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  font-size: 12.5px; font-weight: 600; color: var(--muted);
+}
+.ub-sliders input[type="range"] { flex: 1 1 0; min-width: 0; accent-color: var(--accent); cursor: pointer; }
+.ub-sliders output { flex-shrink: 0; min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
 
 /* params table */
 .table-card {
@@ -327,16 +336,30 @@ footer a:hover { text-decoration: underline; }
       <div class="step">
         <div>
           <h3>Copy the overlay URL</h3>
-          <p>Swap <code>yourname</code> for your Twitch channel name:</p>
+          <p>Swap <code>yourname</code> for your Twitch channel name — then tune it:</p>
           <div class="url-builder">
             <input id="ub-channel" type="text" placeholder="twitch channel name"
               autocomplete="off" spellcheck="false" aria-label="Twitch channel name">
-            <button type="button" class="chip-toggle" id="ub-max" aria-pressed="false"
-              title="Raise the cat cap to 80">more cats</button>
-            <button type="button" class="chip-toggle" id="ub-scale" aria-pressed="false"
-              title="Scale cats up 20%">big cats</button>
-            <button type="button" class="chip-toggle" id="ub-bubbles" aria-pressed="true"
-              title="Toggle speech bubbles">bubbles</button>
+            <div class="ub-toggles">
+              <button type="button" class="chip-toggle" id="ub-bubbles" aria-pressed="true"
+                title="Speech bubbles showing message text">bubbles</button>
+              <button type="button" class="chip-toggle" id="ub-celebrate" aria-pressed="true"
+                title="Mass hops on subs, raids and gift bombs">celebrate</button>
+              <button type="button" class="chip-toggle" id="ub-games" aria-pressed="true"
+                title="Duels, races, boss battles, simon says">games</button>
+              <button type="button" class="chip-toggle" id="ub-flip" aria-pressed="false"
+                title="Flip cats 180° if they walk backwards on your setup">flip</button>
+            </div>
+            <div class="ub-sliders">
+              <label>cats <input id="ub-max" type="range" min="5" max="80" step="5" value="40"
+                aria-label="Max cats on screen"><output id="ub-max-out">40</output></label>
+              <label>size <input id="ub-scale" type="range" min="0.5" max="2" step="0.1" value="1"
+                aria-label="Global cat size"><output id="ub-scale-out">1</output></label>
+              <label>speed <input id="ub-speed" type="range" min="0.5" max="2" step="0.1" value="1"
+                aria-label="Walking speed"><output id="ub-speed-out">1</output></label>
+              <label>idle <input id="ub-ttl" type="range" min="1" max="60" step="1" value="10"
+                aria-label="Minutes before an idle cat despawns"><output id="ub-ttl-out">10m</output></label>
+            </div>
           </div>
           <p class="copy-url"><code id="overlay-url">devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=yourname</code>
             <button type="button" class="copy-btn" data-copy-target="overlay-url"
@@ -532,25 +555,43 @@ footer a:hover { text-decoration: underline; }
   if (reducedMq.addEventListener) reducedMq.addEventListener("change", send);
 })();
 
-// URL builder: type a channel, toggle presets — the OBS URL updates live.
+// URL tuner: type a channel, flip switches, drag sliders — the OBS URL updates live.
 (function () {
   const BASE = "https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html";
   const input = document.getElementById("ub-channel");
   const code = document.getElementById("overlay-url");
   const copyBtn = document.querySelector('.copy-btn[data-copy-target="overlay-url"]');
   if (!input || !code || !copyBtn) return;
-  const toggles = {
-    max: document.getElementById("ub-max"),
-    scale: document.getElementById("ub-scale"),
-    bubbles: document.getElementById("ub-bubbles"),
+  // switch -> url param when ON (default-on switches emit only when turned off)
+  const switches = {
+    bubbles: { el: document.getElementById("ub-bubbles"), on: true },
+    celebrate: { el: document.getElementById("ub-celebrate"), on: true },
+    games: { el: document.getElementById("ub-games"), on: true },
+    flip: { el: document.getElementById("ub-flip"), on: false },
   };
+  // slider id -> [param, default, formatter]
+  const sliders = {
+    max: ["max", "40", (v) => v],
+    scale: ["scale", "1", (v) => String(parseFloat(v))],
+    speed: ["speed", "1", (v) => String(parseFloat(v))],
+    ttl: ["ttl", "10", (v) => v],
+  };
+  const outs = Object.fromEntries(Object.keys(sliders).map((k) => [k, document.getElementById(`ub-${k}-out`)]));
+  const fmtOut = { ttl: (v) => `${v}m`, scale: (v) => String(parseFloat(v)), speed: (v) => String(parseFloat(v)), max: (v) => v };
   const update = () => {
-    const channel = input.value.trim();
     const params = new URLSearchParams();
+    const channel = input.value.trim();
     if (channel) params.set("channel", channel);
-    if (toggles.max?.getAttribute("aria-pressed") === "true") params.set("max", "80");
-    if (toggles.scale?.getAttribute("aria-pressed") === "true") params.set("scale", "1.2");
-    if (toggles.bubbles?.getAttribute("aria-pressed") === "false") params.set("bubbles", "0");
+    for (const [name, sw] of Object.entries(switches)) {
+      if (!sw.el) continue;
+      const pressed = sw.el.getAttribute("aria-pressed") === "true";
+      if (pressed !== sw.on) params.set(name, pressed ? "1" : "0");
+    }
+    for (const [id, [param, def, fmt]] of Object.entries(sliders)) {
+      const el = document.getElementById(`ub-${id}`);
+      if (!el || el.value === def) continue;
+      params.set(param, fmt(el.value));
+    }
     const qs = params.toString();
     const url = qs ? `${BASE}?${qs}` : `${BASE}?channel=yourname`;
     // display copy stays relative like before; the Copy button carries the full https:// URL
@@ -558,10 +599,18 @@ footer a:hover { text-decoration: underline; }
     copyBtn.dataset.copyText = url;
   };
   input.addEventListener("input", update);
-  Object.values(toggles).forEach((btn) => {
-    if (!btn) return;
-    btn.addEventListener("click", () => {
-      btn.setAttribute("aria-pressed", btn.getAttribute("aria-pressed") !== "true" ? "true" : "false");
+  Object.values(switches).forEach((sw) => {
+    if (!sw.el) return;
+    sw.el.addEventListener("click", () => {
+      sw.el.setAttribute("aria-pressed", sw.el.getAttribute("aria-pressed") !== "true" ? "true" : "false");
+      update();
+    });
+  });
+  Object.keys(sliders).forEach((id) => {
+    const el = document.getElementById(`ub-${id}`);
+    if (!el) return;
+    el.addEventListener("input", () => {
+      if (outs[id] && fmtOut[id]) outs[id].textContent = fmtOut[id](el.value);
       update();
     });
   });

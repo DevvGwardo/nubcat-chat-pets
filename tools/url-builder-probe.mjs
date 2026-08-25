@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// One-off probe: drive the new URL builder headlessly, assert live URL updates,
+// One-off probe: drive the URL tuner headlessly, assert live URL updates,
 // capture a screenshot of the setup section. Mirrors boot-check.mjs plumbing.
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
@@ -49,6 +49,7 @@ function send(ws, method, params = {}) {
   return new Promise((res, rej) => pending.set(id, { res, rej }));
 }
 
+const BASE = "https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html";
 let fail = 0;
 try {
   const ws = new WebSocket(target.webSocketDebuggerUrl);
@@ -73,45 +74,61 @@ try {
   await send(ws, "Page.navigate", { url: `${origin}/index.html` });
   await sleep(2500);
 
-  // type a channel + flip all toggles
+  // 1. type channel + flip switches + drag sliders
   await run(`(() => {
     document.getElementById("setup").scrollIntoView();
     const input = document.getElementById("ub-channel");
-    input.focus();
     input.value = "testchannel";
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    for (const id of ["ub-max","ub-scale","ub-bubbles"]) document.getElementById(id).click();
+    for (const id of ["ub-bubbles","ub-games","ub-flip"]) document.getElementById(id).click();
+    const setSlider = (id, v) => {
+      const el = document.getElementById(id);
+      el.value = v;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    setSlider("ub-max", "60");
+    setSlider("ub-scale", "1.5");
+    setSlider("ub-speed", "1.2");
   })()`);
   await sleep(300);
-  const state = JSON.parse(await run(`JSON.stringify({
-    display: document.getElementById("overlay-url").textContent,
+  let state = JSON.parse(await run(`JSON.stringify({
     copyText: document.querySelector('.copy-btn[data-copy-target="overlay-url"]').dataset.copyText,
-    pressed: Object.fromEntries(["ub-max","ub-scale","ub-bubbles"].map(id => [id, document.getElementById(id).getAttribute("aria-pressed")])),
+    outs: Object.fromEntries(["max","scale","speed","ttl"].map(k => [k, document.getElementById('ub-'+k+'-out').textContent])),
   })`));
-  console.log("BUILDER STATE:", JSON.stringify(state, null, 2));
+  // bubbles off -> bubbles=0; games off -> games=0; flip on(default off) -> flip=1
+  // celebrate untouched (on, default-on) -> omitted; ttl untouched -> omitted
+  const expect1 = `${BASE}?channel=testchannel&bubbles=0&games=0&flip=1&max=60&scale=1.5&speed=1.2`;
+  console.log(`TUNER-SLIDE ${state.copyText === expect1 ? "OK" : "FAIL"} got=${state.copyText}`);
+  console.log(`TUNER-OUTS ${state.outs.max === "60" && state.outs.scale === "1.5" && state.outs.speed === "1.2" && state.outs.ttl === "10m" ? "OK" : "FAIL"} ${JSON.stringify(state.outs)}`);
+  if (state.copyText !== expect1) fail++;
 
-  const expectCopy = "https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=testchannel&max=80&scale=1.2&bubbles=0";
-  const okUrl = state.copyText === expectCopy &&
-    state.display === expectCopy.replace(/^https:\/\//, "");
-  const okPressed = state.pressed["ub-max"] === "true" && state.pressed["ub-scale"] === "true" && state.pressed["ub-bubbles"] === "false";
-
-  // toggle bubbles back on -> param drops out
-  await run(`document.getElementById("ub-bubbles").click()`);
-  await sleep(200);
-  const copy2 = await run(`document.querySelector('.copy-btn[data-copy-target="overlay-url"]').dataset.copyText`);
-  const okOff = copy2 === "https://devvgwardo.github.io/nubcat-chat-pets/overlay/index.html?channel=testchannel&max=80&scale=1.2";
-
-  console.log(`BUILDER ${okUrl && okPressed ? "OK" : "FAIL"} url-live=${okUrl} aria=${okPressed}`);
-  console.log(`BUILDER-OFF ${okOff ? "OK" : "FAIL"} bubbles-param-drops=${okOff} got=${copy2}`);
-  if (!okUrl || !okPressed || !okOff) fail++;
+  // 2. reset defaults via sliders back to default values -> params drop out
+  await run(`(() => {
+    const setSlider = (id, v) => {
+      const el = document.getElementById(id);
+      el.value = v;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    setSlider("ub-max", "40"); setSlider("ub-scale", "1"); setSlider("ub-speed", "1");
+    document.getElementById("ub-bubbles").click(); // back on
+    document.getElementById("ub-games").click();   // back on
+    document.getElementById("ub-flip").click();    // back off
+  })()`);
+  await sleep(300);
+  state = JSON.parse(await run(`JSON.stringify({
+    copyText: document.querySelector('.copy-btn[data-copy-target="overlay-url"]').dataset.copyText,
+  })`));
+  const expect2 = `${BASE}?channel=testchannel`;
+  console.log(`TUNER-RESET ${state.copyText === expect2 ? "OK" : "FAIL"} got=${state.copyText}`);
+  if (state.copyText !== expect2) fail++;
   if (errors.length) fail++;
 
   // screenshot the setup section for visual verification
   await run(`document.getElementById("setup").scrollIntoView()`);
   await sleep(600);
   const s = await send(ws, "Page.captureScreenshot", { format: "png" });
-  writeFileSync("/tmp/nubcat-url-builder.png", Buffer.from(s.data, "base64"));
-  console.log("shot: /tmp/nubcat-url-builder.png");
+  writeFileSync("/tmp/nubcat-url-tuner.png", Buffer.from(s.data, "base64"));
+  console.log("shot: /tmp/nubcat-url-tuner.png");
 
   chrome.kill("SIGKILL");
   server.close();
