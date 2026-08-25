@@ -87,12 +87,6 @@ nav {
 
 /* ---------- hero ---------- */
 .hero { padding: 72px 0 48px; text-align: center; }
-.hero-cat {
-  width: 104px; height: 104px; margin: 0 auto 16px;
-}
-.hero-cat .eye { animation: blink 6s infinite; transform-origin: center; }
-@media (prefers-reduced-motion: reduce) { .hero-cat .eye { animation: none; } }
-@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.08); } }
 h1 {
   font-size: clamp(30px, 5vw, 44px); font-weight: 700;
   letter-spacing: -0.02em; line-height: 1.14; max-width: 640px; margin: 0 auto;
@@ -280,11 +274,6 @@ footer a:hover { text-decoration: underline; }
 <main id="main">
 
   <header class="hero">
-    <svg class="hero-cat" viewBox="-15 -15 259 259" fill="none" aria-hidden="true">
-      <path d="M34.41 164.66Q18 150 11.46 128.99L10.54 126.01Q4 105 13.52 85.17L21.08 69.42Q28 55 34.26 40.28L44.48 16.28Q48 8 54.86 13.83L79.62 34.88Q88 42 98.97 42.84L102.3 43.09Q114.27 44 126.24 43.09L129.57 42.84Q140.54 42 148.92 34.88L173.68 13.83Q180.54 8 184.06 16.28L194.28 40.28Q200.54 55 207.46 69.42L215.02 85.17Q224.54 105 218 126.01L217.08 128.99Q210.54 150 194.13 164.66L186.64 171.35Q168 188 143.42 192.57L139.83 193.24Q114.27 198 88.71 193.24L85.12 192.57Q60.54 188 41.9 171.35Z" fill="#ADD1F7"/>
-      <circle class="eye" cx="84" cy="96" r="11" fill="#1a3d6b"/>
-      <circle class="eye" cx="144" cy="96" r="11" fill="#1a3d6b"/>
-    </svg>
     <h1>Every viewer becomes a<br /><em>nub cat</em> on your stream</h1>
     <p class="hero-sub">One browser source in OBS turns your Twitch chat into a crowd of
       roaming 3D nub cats — they chat, they hop, they duel, they race,
