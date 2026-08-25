@@ -61,5 +61,37 @@ while (queue.length) {
 }
 server.close();
 
-if (fail) { console.log(`FAILED: ${fail} URL(s) not 200`); process.exit(1); }
+// g13: the repo-root overlay copy (index.html + src/) must stay in sync with
+// the canonical docs/overlay copy — a silent drift here means the direct/OBS
+// hosted overlay serves stale styles or an older render loop.
+const REPO_ROOT = new URL("../", import.meta.url).pathname;
+const OVERLAY_SRC = ["cat.js", "chat.js", "config.js", "fx.js", "games.js",
+  "main.js", "manager.js", "mock.js", "points.js", "scene.js"];
+let syncFail = 0;
+const norm = (s) => s.replace(/\s+/g, "");
+
+{
+  const [rootHtml, docsHtml] = await Promise.all([
+    readFile(REPO_ROOT + "index.html", "utf8").catch(() => ""),
+    readFile(REPO_ROOT + "docs/overlay/index.html", "utf8").catch(() => ""),
+  ]);
+  const ok = rootHtml && docsHtml && norm(rootHtml) === norm(docsHtml);
+  console.log(`SYNC ${ok ? "OK" : "FAIL"}: index.html ${ok ? "===" : "!== (drifted)"} docs/overlay/index.html`);
+  if (!ok) syncFail++;
+}
+for (const f of OVERLAY_SRC) {
+  const [a, b] = await Promise.all([
+    readFile(`${REPO_ROOT}src/${f}`, "utf8").catch(() => null),
+    readFile(`${REPO_ROOT}docs/overlay/src/${f}`, "utf8").catch(() => null),
+  ]);
+  const ok = a !== null && a === b;
+  console.log(`SYNC ${ok ? "OK" : "FAIL"}: src/${f} ${ok ? "===" : "!== (drifted)"} docs/overlay/src/${f}`);
+  if (!ok) syncFail++;
+}
+
+if (fail || syncFail) {
+  if (fail) console.log(`FAILED: ${fail} URL(s) not 200`);
+  if (syncFail) console.log(`FAILED: ${syncFail} overlay-copy sync mismatch(es)`);
+  process.exit(1);
+}
 console.log("OVERLAY ASSETS OK");

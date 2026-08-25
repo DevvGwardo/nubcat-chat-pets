@@ -60,6 +60,11 @@
   EXPECT: /DEMOFRAME OK iframe-canvas=true/
   EVIDENCE: DEMOFRAME OK iframe-canvas=true | BOOT OK cats=8 errors=none
 
+- [x] g13-root-copy-in-sync: repo-root overlay copy (index.html + src/*.js) matches the canonical docs/overlay copy
+  CHECK: node tools/check-overlay-assets.mjs
+  EXPECT: /SYNC OK/ for every file and OVERLAY ASSETS OK
+  EVIDENCE: SYNC OK x11 | OVERLAY ASSETS OK
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.
