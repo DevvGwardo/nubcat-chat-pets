@@ -70,6 +70,11 @@
   EXPECT: /BOOT OK cats=\d+ errors=none/
   EVIDENCE: LANDING OK | SCROLLSPY OK active=Settings | DEMOFRAME OK iframe-canvas=true | BOOT OK cats=8 errors=none
 
+- [x] g15-games-logic: duel/race/boss/simon game logic exercises headless with asserted invariants and zero JS errors
+  CHECK: node tools/games-test.mjs
+  EXPECT: /GAMES OK/
+  EVIDENCE: 11/11 OK (duel charge->clash->crown, race finish->clear, boss spawn->defeat, simon) | JS_ERRORS: none
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.
