@@ -48,10 +48,20 @@ if (config.games) {
 // --- load the cat model ---------------------------------------------------
 async function boot() {
   const loader = new FBXLoader();
-  manager.proto = await prepareCatPrototype(loader, "assets/cat.fbx", "assets/texture.png");
+  // Three nub variants spawn mixed at random — classic blue, naked, pink.
+  // All share assets/texture.png; prepareCatPrototype force-applies it and
+  // normalizes each rig to unit height so variants are size-consistent.
+  manager.protos = await Promise.all(
+    ["cat.fbx", "naked_nub.fbx", "pink_nub.fbx"].map((file) =>
+      prepareCatPrototype(loader, `assets/${file}`, "assets/texture.png")
+    )
+  );
   // ?scale= multiplier — everything downstream reads these two numbers.
-  manager.proto.unitScale *= config.scale;
-  manager.proto.height *= config.scale;
+  for (const p of manager.protos) {
+    p.unitScale *= config.scale;
+    p.height *= config.scale;
+  }
+  manager.proto = manager.protos[0]; // default (boss tinting etc.)
   // 130px inset keeps name labels inside the frame at the roam-area edges.
   manager.setBounds(groundBounds(130));
 

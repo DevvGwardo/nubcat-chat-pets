@@ -66,13 +66,20 @@ export class Cat {
     this.root.position.copy(randomPointIn(bounds));
 
     // Collect bones by name and remember their rest quaternions so all
-    // animation is additive on top of the rig's rest pose.
-    this.bones = {};
-    this.rest = {};
+    // animation is additive on top of the rig's rest pose. boneMap translates
+    // the canonical names the animation code uses (body/leg.L/paw.L/head…)
+    // into this rig's actual bone names.
+    this.boneMap = proto.boneMap || {};
+    this.bones = {}; // canonical name -> bone
+    this.rest = {}; // canonical name -> rest quaternion
     this.root.traverse((o) => {
       if (o.isBone) {
-        this.bones[o.name] = o;
-        this.rest[o.name] = o.quaternion.clone();
+        for (const [canonical, actual] of Object.entries(this.boneMap)) {
+          if (o.name === actual && !this.bones[canonical]) {
+            this.bones[canonical] = o;
+            this.rest[canonical] = o.quaternion.clone();
+          }
+        }
       }
     });
 
@@ -483,21 +490,23 @@ function randomPointIn(b) {
 // texture reference, and return a prototype ready for SkeletonUtils cloning.
 export async function prepareCatPrototype(loader, url, textureUrl) {
   const fbx = await loader.loadAsync(url);
-
   const tex = await new THREE.TextureLoader().loadAsync(textureUrl);
   tex.colorSpace = THREE.SRGBColorSpace;
   fbx.traverse((o) => {
-    if (o.isMesh && o.material) {
-      o.material.map = tex;
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of mats) {
+      if (!m) continue;
+      m.map = tex;
       // The rig ships grey diffuse AND grey vertex colors — either one multiplies
       // the blue texture down to silver. Neutralize both; the texture has all
       // the real color/detail.
-      o.material.color.setScalar(1);
-      o.material.vertexColors = false;
+      if (m.color) m.color.setScalar(1);
+      m.vertexColors = false;
       // Matte pastel look — default Phong specular makes it read as silver.
-      if ("specular" in o.material) o.material.specular.setScalar(0.06);
-      if ("shininess" in o.material) o.material.shininess = 6;
-      o.material.needsUpdate = true;
+      if ("specular" in m && m.specular) m.specular.setScalar(0.06);
+      if ("shininess" in m) m.shininess = 6;
+      m.needsUpdate = true;
     }
   });
 
@@ -514,5 +523,24 @@ export async function prepareCatPrototype(loader, url, textureUrl) {
   // After scaling, re-measure so we know where the head is for labels.
   const scaledBox = new THREE.Box3().setFromObject(wrap);
 
-  return { scene: wrap, unitScale, height: scaledBox.max.y };
+  return { scene: wrap, unitScale, height: scaledBox.max.y, boneMap: detectBoneMap(wrap) };
+}
+
+// Canonical bone names the animation code uses -> per-rig actual names.
+const BONE_ALIASES = [
+  // classic cat.fbx rig: only body/head exist under these names (runtime-verified;
+  // the rig's legL/pawL bones have never matched the legacy "leg.L" lookups,
+  // so classic cats animate via body bob + head nod alone — preserved as-is)
+  { body: "body", head: "head" },
+  // mixamo-style nub rigs (naked_nub.fbx / pink_nub.fbx): full leg/foot mapping
+  { body: "Root_hip", head: "Head", "leg.L": "Leg_L", "leg.R": "Leg_R", "paw.L": "Foot_L", "paw.R": "Foot_R" },
+];
+
+function detectBoneMap(root) {
+  const names = new Set();
+  root.traverse((o) => { if (o.isBone) names.add(o.name); });
+  for (const map of BONE_ALIASES) {
+    if (Object.values(map).every((n) => names.has(n))) return map;
+  }
+  return null; // unknown rig — animation code's `if (!bone) return` guards cope
 }

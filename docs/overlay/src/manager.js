@@ -63,7 +63,11 @@ export class PetManager {
       return cat;
     }
     if (this.cats.size >= this.config.max) this.recycleOldest(now);
-    cat = new Cat(this.proto, user, color, this.bounds);
+    // Random variant per cat — classic blue / naked / pink spawn mixed.
+    const proto = this.protos
+      ? this.protos[Math.floor(Math.random() * this.protos.length)]
+      : this.proto;
+    cat = new Cat(proto, user, color, this.bounds);
     cat.yawFlip = this.config.flip ? 1 : 0;
     // Enter from a random edge just off-screen, then wander in.
     const edge = Math.floor(Math.random() * 4);
