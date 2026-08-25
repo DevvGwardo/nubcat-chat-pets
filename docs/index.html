@@ -437,6 +437,32 @@ footer a:hover { text-decoration: underline; }
     if (sec) observer.observe(sec);
   });
 })();
+
+// Demo auto-pause: the embedded overlay keeps rendering at 60fps even when
+// scrolled past (an off-screen iframe inside a visible tab never fires
+// visibilitychange). Pause its render loop via the overlay's postMessage hook
+// once the demo is well out of view, resume on the way back.
+(function () {
+  const demo = document.querySelector("iframe.nub-demo");
+  if (!demo || !("IntersectionObserver" in window)) return;
+  let offscreen = false;
+  const send = () =>
+    demo.contentWindow &&
+    demo.contentWindow.postMessage({ type: "nubcat-set-paused", paused: offscreen }, "*");
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        offscreen = !e.isIntersecting;
+        send();
+      }
+    },
+    { rootMargin: "-100px 0px -100px 0px" } // hysteresis: pause when <~100px of the demo is visible
+  );
+  io.observe(demo);
+  // Re-apply after the lazy iframe loads — a pause sent before the overlay's
+  // listener registered would otherwise be lost.
+  demo.addEventListener("load", send);
+})();
 </script>
 </body>
 </html>

@@ -152,4 +152,13 @@ function syncVisibility() {
 // Run once at startup so a restored hidden tab stays paused until shown.
 document.addEventListener("visibilitychange", syncVisibility);
 syncVisibility();
+
+// Parent pages (e.g. the landing demo) can pause us when we're scrolled out
+// of view — same pause/resume path as the visibility handler.
+window.addEventListener("message", (ev) => {
+  if (ev.data && ev.data.type === "nubcat-set-paused") {
+    if (ev.data.paused) pauseLoop();
+    else resumeLoop();
+  }
+});
 boot();
