@@ -65,6 +65,11 @@
   EXPECT: /SYNC OK/ for every file and OVERLAY ASSETS OK
   EVIDENCE: SYNC OK x11 | OVERLAY ASSETS OK
 
+- [x] g14-live-boots-headless: the deployed GitHub Pages site boots headless with zero JS errors (landing, scrollspy, demo iframe, cats)
+  CHECK: NUB_ORIGIN=https://devvgwardo.github.io/nubcat-chat-pets/ node tools/boot-check.mjs
+  EXPECT: /BOOT OK cats=\d+ errors=none/
+  EVIDENCE: LANDING OK | SCROLLSPY OK active=Settings | DEMOFRAME OK iframe-canvas=true | BOOT OK cats=8 errors=none
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.
