@@ -9,21 +9,29 @@ import { writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 
 const ROOT = new URL("../docs", import.meta.url).pathname;
+const REPO_ROOT = new URL("../", import.meta.url).pathname;
 const TYPES = {
   ".html": "text/html", ".js": "text/javascript", ".png": "image/png",
   ".fbx": "application/octet-stream", ".svg": "image/svg+xml",
 };
-const server = createServer(async (req, res) => {
-  try {
-    const path = join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
-    const data = await readFile(path);
-    res.writeHead(200, { "content-type": TYPES[extname(path)] || "application/octet-stream" });
-    res.end(data);
-  } catch { res.writeHead(404); res.end(); }
-});
+const makeServer = (base) =>
+  createServer(async (req, res) => {
+    try {
+      const path = join(base, decodeURIComponent(new URL(req.url, "http://x").pathname));
+      const data = await readFile(path);
+      res.writeHead(200, { "content-type": TYPES[extname(path)] || "application/octet-stream" });
+      res.end(data);
+    } catch { res.writeHead(404); res.end(); }
+  });
+const server = makeServer(ROOT);
 await new Promise((r) => server.listen(0, r));
 // NUB_ORIGIN overrides the local server (e.g. to check production).
 const origin = process.env.NUB_ORIGIN || `http://127.0.0.1:${server.address().port}`;
+// Second server for the repo-root overlay (direct/OBS-hosted copy). Pages
+// serves docs/ as the site root, so the root copy is only reachable locally.
+const rootServer = makeServer(REPO_ROOT);
+await new Promise((r) => rootServer.listen(0, r));
+const rootOrigin = `http://127.0.0.1:${rootServer.address().port}`;
 
 const PORT = 9339;
 const chrome = spawn(
@@ -158,10 +166,24 @@ try {
   if (cats < 8 || errors.length) fail++;
   await shotTo("/tmp/nubcat-overlay.png");
 
+  // ---- phase C: repo-root overlay boots (direct/OBS-hosted copy) ----
+  errors.length = 0;
+  await send(ws, "Page.navigate", { url: `${rootOrigin}/index.html?mock=1&debug=1` });
+  let rootCats = 0;
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000);
+    rootCats = (await run(`window.__nubcat ? window.__nubcat.manager.cats.size : 0`)) || 0;
+    if (rootCats >= 8) break;
+  }
+  console.log(`ROOTBOOT ${rootCats >= 8 && errors.length === 0 ? "OK" : "FAIL"} cats=${rootCats} errors=${errors.length ? errors.join(" | ") : "none"}`);
+  if (rootCats < 8 || errors.length) fail++;
+
   chrome.kill("SIGKILL");
   server.close();
+  rootServer.close();
   process.exit(fail ? 1 : 0);
 } finally {
   chrome.kill("SIGKILL");
   server.close();
+  rootServer.close();
 }

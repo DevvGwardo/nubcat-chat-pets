@@ -80,6 +80,11 @@
   EXPECT: /MOBILE OK/
   EVIDENCE: MOBILE OK deviceW=375 vw=375 scrollW=375 heroBtn=182 navLinksCollapsed=true errors=0
 
+- [x] g17-root-overlay-boots: the repo-root overlay copy (direct/OBS-hosted entry) boots headless with cats and zero JS errors
+  CHECK: node tools/boot-check.mjs
+  EXPECT: /ROOTBOOT OK/
+  EVIDENCE: ROOTBOOT OK cats=9 errors=none
+
 ## Notes
 - Images must be viewed via `bull-vision`, never via read/attach (text-only model hard rule).
 - Overlay is fully client-side; hosted copy under docs/overlay/ makes demo + hosted-OBS-setup work.
