@@ -44,6 +44,21 @@ a:focus-visible, summary:focus-visible {
   border-radius: 6px;
 }
 
+/* Keyboard users land here first; hidden until focused. */
+.skip-link {
+  position: fixed;
+  top: -56px; left: 16px;
+  z-index: 100;
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus-visible { top: 12px; }
+
 /* ---------- nav ---------- */
 nav {
   position: sticky; top: 0; z-index: 50;
@@ -218,6 +233,8 @@ footer a:hover { text-decoration: underline; }
 </head>
 <body>
 
+<a class="skip-link" href="#main">Skip to content</a>
+
 <nav>
   <div class="nav-inner">
     <a class="nav-logo" href="#top"><img src="./assets/mascot.png" alt="nub cat" /> Nub Chat Pets</a>
@@ -232,6 +249,8 @@ footer a:hover { text-decoration: underline; }
 </nav>
 
 <div class="wrap" id="top">
+
+<main id="main">
 
   <header class="hero">
     <svg class="hero-cat" viewBox="-15 -15 259 259" fill="none" aria-hidden="true">
@@ -404,6 +423,8 @@ footer a:hover { text-decoration: underline; }
       </details>
     </div>
   </section>
+
+</main>
 
   <footer>
     <img src="./assets/mascot.png" alt="" />
