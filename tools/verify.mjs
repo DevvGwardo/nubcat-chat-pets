@@ -1,18 +1,27 @@
 #!/usr/bin/env node
 // Real-time verification driver: loads the overlay in headless Chrome,
 // waits N seconds of wall-clock time, screenshots it, and reports state.
-// Usage: node verify.mjs <url> <waitSeconds> <outPng>
+// Usage: node verify.mjs <url> [waitSeconds] [outPng]
 import { spawn } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, rmSync } from "node:fs";
 
 const [url, waitSec = "25", out = "/tmp/nubcat-verify.png"] = process.argv.slice(2);
+if (!url) {
+  console.error("Usage: node tools/verify.mjs <url> [waitSeconds] [outPng]");
+  console.error("  e.g. node tools/verify.mjs http://localhost:8741/overlay/index.html?mock=1 8");
+  process.exit(1);
+}
 const PORT = 9333;
+const PROFILE = "/tmp/nubcat-chrome-profile";
+// Fresh profile per run: a stale disk cache or leftover profile lock from a
+// killed run would otherwise serve old content or crash the launch.
+rmSync(PROFILE, { recursive: true, force: true });
 const chrome = spawn(
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   [
     "--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
     "--hide-scrollbars", "--window-size=1600,900",
-    `--remote-debugging-port=${PORT}`, "--no-first-run", "--user-data-dir=/tmp/nubcat-chrome-profile",
+    `--remote-debugging-port=${PORT}`, "--no-first-run", `--user-data-dir=${PROFILE}`,
     "about:blank",
   ],
   { stdio: "ignore" }
