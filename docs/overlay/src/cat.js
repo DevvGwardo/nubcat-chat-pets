@@ -524,13 +524,22 @@ export async function prepareCatPrototype(loader, url, textureUrl) {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of mats) {
       if (!m) continue;
-      m.map = tex;
-      // The rig ships grey diffuse AND grey vertex colors — either one multiplies
-      // the blue texture down to silver. Neutralize both; the texture has all
-      // the real color/detail.
-      if (m.color) m.color.setScalar(1);
-      m.vertexColors = false;
-      // Matte pastel look — default Phong specular makes it read as silver.
+      // The classic cat ships an untextured grey material + vertex colors and
+      // relies on texture.png for ALL its color/detail — stamp the texture,
+      // neutralize diffuse/vertex colors, or it renders silver.
+      //
+      // The new nub rigs (naked/pink) are SOLID-COLOR models: body materials
+      // carry their real color (#64a6ff / #ffcadc) with no map. Forcing
+      // texture.png onto them smears classic-cat face pixels across their UVs
+      // (the "bad mapping"). So: only override meshes that have no map of
+      // their own AND ship vertex colors (the classic rig's fingerprint).
+      const isClassicOverride = !m.map && m.vertexColors;
+      if (isClassicOverride) {
+        m.map = tex;
+        if (m.color) m.color.setScalar(1);
+        m.vertexColors = false;
+      }
+      // Matte pastel look for everyone — default Phong specular reads silver.
       if ("specular" in m && m.specular) m.specular.setScalar(0.06);
       if ("shininess" in m) m.shininess = 6;
       m.needsUpdate = true;
